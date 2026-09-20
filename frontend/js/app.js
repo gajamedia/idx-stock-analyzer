@@ -5,7 +5,26 @@ let countdownTimer = null;
 let countdownValue = 0;
 let previousPrices = {};
 
+function toggleMobileMenu() {
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+    const toggle = document.getElementById("mobile-menu-toggle");
+    sidebar.classList.toggle("open");
+    overlay.classList.toggle("active");
+    toggle.classList.toggle("active");
+}
+
+function closeMobileMenu() {
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+    const toggle = document.getElementById("mobile-menu-toggle");
+    sidebar.classList.remove("open");
+    overlay.classList.remove("active");
+    toggle.classList.remove("active");
+}
+
 function showSection(section) {
+    closeMobileMenu();
     document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
     document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
 

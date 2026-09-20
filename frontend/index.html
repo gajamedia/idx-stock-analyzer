@@ -8,7 +8,12 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="sidebar">
+    <div class="mobile-menu-toggle" id="mobile-menu-toggle" onclick="toggleMobileMenu()">
+        <span></span>
+    </div>
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeMobileMenu()"></div>
+
+    <div class="sidebar" id="sidebar">
         <div class="logo">
             <h2>📈 IDX Analyzer</h2>
             <div id="ws-status" class="ws-status ws-disconnected">
