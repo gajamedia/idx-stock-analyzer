@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDX Stock Analyzer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <h2>📈 IDX Analyzer</h2>
+            <div id="ws-status" class="ws-status ws-disconnected">
+                <span class="dot"></span> Disconnected
+            </div>
+        </div>
+        <nav>
+            <a href="#" class="nav-item active" onclick="showSection('dashboard')">Dashboard</a>
+            <a href="#" class="nav-item" onclick="showSection('watchlist')">Kelola Watchlist</a>
+            <a href="#" class="nav-item" onclick="showSection('financial')">Financial Data</a>
+            <a href="#" class="nav-item" onclick="showSection('backtest')">Backtesting</a>
+            <a href="#" class="nav-item" onclick="showSection('alerts')">Alert System</a>
+            <a href="#" class="nav-item" onclick="showSection('monitor')">Live Monitor</a>
+            <a href="#" class="nav-item" onclick="showSection('notifications')">Notifications</a>
+            <a href="#" class="nav-item" onclick="showSection('horizon')">Horizon Analysis</a>
+            <a href="#" class="nav-item" onclick="showSection('reports')">Reports</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <header>
+            <h1 id="page-title">Dashboard</h1>
+            <div class="header-actions">
+                <div class="auto-refresh-control">
+                    <label>Auto-refresh:</label>
+                    <select id="refresh-interval" onchange="setAutoRefresh()">
+                        <option value="0">Off</option>
+                        <option value="10">10s</option>
+                        <option value="30" selected>30s</option>
+                        <option value="60">60s</option>
+                        <option value="120">2min</option>
+                    </select>
+                    <span id="refresh-countdown"></span>
+                </div>
+                <input type="text" id="global-search" placeholder="Cari saham (contoh: BBCA)" onkeypress="if(event.key==='Enter') analyzeStock()">
+                <button class="btn btn-primary" onclick="analyzeStock()">Analisis</button>
+            </div>
+        </header>
+
+        <div id="dashboard-section" class="section active">
+            <div class="market-overview" id="market-overview">
+                <div class="market-card">
+                    <h3>IHSG</h3>
+                    <p class="value" id="ihsg-value">Loading...</p>
+                </div>
+                <div class="market-card">
+                    <h3>Change</h3>
+                    <p class="value" id="ihsg-change">--</p>
+                </div>
+            </div>
+            <h2>Watchlist <span class="live-badge">LIVE</span></h2>
+            <div id="watchlist" class="stock-grid"></div>
+        </div>
+
+        <div id="watchlist-section" class="section">
+            <h2>Kelola Watchlist</h2>
+            <p style="color:#888;margin-bottom:15px">Tambahkan saham apapun yang ingin Anda pantau. Ketik kode emiten Indonesia (misal: BBCA, TLKM, dll)</p>
+            <div class="watchlist-form">
+                <input type="text" id="wl-symbol" placeholder="Kode Saham (misal: BBCA)" onkeypress="if(event.key==='Enter') addToWatchlist()">
+                <input type="text" id="wl-name" placeholder="Nama Perusahaan (opsional)">
+                <input type="text" id="wl-notes" placeholder="Catatan (opsional)">
+                <button class="btn btn-success" onclick="addToWatchlist()">+ Tambah</button>
+                <button class="btn btn-danger" onclick="clearWatchlist()">Hapus Semua</button>
+            </div>
+            <div class="watchlist-stats">
+                <span id="wl-count">0</span> saham di watchlist
+            </div>
+            <h3>Daftar Watchlist</h3>
+            <div id="watchlist-list"></div>
+            <h3 style="margin-top:30px">Analisis Watchlist</h3>
+            <button class="btn btn-primary" onclick="analyzeFullWatchlist()" style="margin-bottom:15px">Analisis Semua Watchlist</button>
+            <div id="watchlist-analysis" class="stock-grid"></div>
+        </div>
+
+        <div id="analysis-section" class="section">
+            <div id="analysis-result" class="analysis-container">
+                <p class="placeholder">Masukkan kode saham dan klik "Analisis" untuk mulai</p>
+            </div>
+        </div>
+
+        <div id="backtest-section" class="section">
+            <div class="controls">
+                <input type="text" id="bt-symbol" placeholder="Kode saham">
+                <select id="bt-strategy">
+                    <option value="all">Semua Strategi</option>
+                    <option value="rsi">RSI Strategy</option>
+                    <option value="macd">MACD Crossover</option>
+                    <option value="ma">MA Crossover</option>
+                </select>
+                <input type="number" id="bt-capital" placeholder="Modal (Rp)" value="1000000">
+                <button class="btn btn-primary" onclick="runBacktest()">Run Backtest</button>
+            </div>
+            <div id="backtest-result"></div>
+        </div>
+
+        <div id="financial-section" class="section">
+            <h2>Update Financial Data</h2>
+            <p style="color:#888;margin-bottom:15px">Update laporan keuangan emiten untuk analisis fundamental yang lebih akurat.</p>
+
+            <div class="quick-fetch-card">
+                <h3>Fetch & Simpan Otomatis</h3>
+                <p style="color:#888;margin-bottom:10px;font-size:0.9rem">Ketik kode emiten, sistem akan langsung mengambil laporan keuangan terbaru dari berbagai sumber dan menyimpannya ke database lokal.</p>
+                <div class="quick-fetch-form" style="display:flex;gap:8px;flex-wrap:wrap">
+                    <input type="text" id="quick-fetch-symbol" placeholder="Kode Emiten (misal: BBCA)" onkeypress="if(event.key==='Enter') quickFetchFinancial()" style="flex:1;min-width:120px">
+                    <select id="fetch-source" style="padding:8px;border-radius:6px;background:#1a1a2e;color:#eee;border:1px solid #333;min-width:140px">
+                        <option value="auto">Auto (Terbaik)</option>
+                        <option value="yahoo">Yahoo Finance</option>
+                        <option value="alpha_vantage">Alpha Vantage</option>
+                        <option value="finnhub">Finnhub</option>
+                        <option value="idx">IDX / BEI</option>
+                        <option value="investing_com">Investing.com</option>
+                        <option value="marketwatch">MarketWatch</option>
+                        <option value="stockanalysis">StockAnalysis</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="quickFetchFinancial()">Fetch & Simpan</button>
+                    <button class="btn btn-success" onclick="fetchMultiSource()" title="Fetch dari semua sumber sekaligus">Multi-Source Fetch</button>
+                </div>
+                <div id="quick-fetch-result"></div>
+            </div>
+
+            <div class="controls" style="margin-top:20px">
+                <button class="btn btn-primary" onclick="loadAllFinancialData()">Lihat Semua Data</button>
+                <button class="btn btn-success" onclick="showAddFinancialForm()">+ Tambah Manual</button>
+            </div>
+
+            <div id="add-financial-form" style="display:none">
+                <h3>Tambah/Update Data Keuangan</h3>
+                <div class="financial-form">
+                    <div class="form-row">
+                        <label>Kode Saham *</label>
+                        <input type="text" id="fin-symbol" placeholder="misal: AMRT">
+                    </div>
+                    <div class="form-row">
+                        <label>Periode (YYYY-MM)</label>
+                        <input type="text" id="fin-period" placeholder="2025-12">
+                    </div>
+                    <h4 style="margin-top:15px;color:#4ecca3">Income Statement</h4>
+                    <div class="form-grid">
+                        <div class="form-row">
+                            <label>Revenue (Miliar Rp)</label>
+                            <input type="number" id="fin-revenue" placeholder="126737">
+                        </div>
+                        <div class="form-row">
+                            <label>Net Profit (Miliar Rp)</label>
+                            <input type="number" id="fin-net-profit" placeholder="3411">
+                        </div>
+                    </div>
+                    <h4 style="margin-top:15px;color:#4ecca3">Balance Sheet</h4>
+                    <div class="form-grid">
+                        <div class="form-row">
+                            <label>Total Assets (Miliar Rp)</label>
+                            <input type="number" id="fin-total-assets" placeholder="42579">
+                        </div>
+                        <div class="form-row">
+                            <label>Total Equity (Miliar Rp)</label>
+                            <input type="number" id="fin-total-equity" placeholder="19383">
+                        </div>
+                        <div class="form-row">
+                            <label>Total Debt (Miliar Rp)</label>
+                            <input type="number" id="fin-total-debt" placeholder="23196">
+                        </div>
+                    </div>
+                    <h4 style="margin-top:15px;color:#4ecca3">Ratios</h4>
+                    <div class="form-grid">
+                        <div class="form-row">
+                            <label>PE Ratio</label>
+                            <input type="number" step="0.1" id="fin-pe" placeholder="16.7">
+                        </div>
+                        <div class="form-row">
+                            <label>PB Ratio</label>
+                            <input type="number" step="0.1" id="fin-pb" placeholder="2.9">
+                        </div>
+                        <div class="form-row">
+                            <label>ROE (%)</label>
+                            <input type="number" step="0.1" id="fin-roe" placeholder="18.4">
+                        </div>
+                        <div class="form-row">
+                            <label>ROA (%)</label>
+                            <input type="number" step="0.1" id="fin-roa" placeholder="8.4">
+                        </div>
+                        <div class="form-row">
+                            <label>Gross Margin (%)</label>
+                            <input type="number" step="0.1" id="fin-gross-margin" placeholder="21.9">
+                        </div>
+                        <div class="form-row">
+                            <label>Net Margin (%)</label>
+                            <input type="number" step="0.1" id="fin-net-margin" placeholder="2.7">
+                        </div>
+                        <div class="form-row">
+                            <label>Debt/Equity (%)</label>
+                            <input type="number" step="0.1" id="fin-de" placeholder="22.0">
+                        </div>
+                        <div class="form-row">
+                            <label>Dividend Yield (%)</label>
+                            <input type="number" step="0.1" id="fin-div" placeholder="2.3">
+                        </div>
+                    </div>
+                    <div style="margin-top:15px">
+                        <button class="btn btn-success" onclick="saveFinancialData()">Simpan Data</button>
+                        <button class="btn" onclick="hideAddFinancialForm()">Batal</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="financial-list"></div>
+
+            <h3 style="margin-top:30px">Update History</h3>
+            <div id="financial-history"></div>
+        </div>
+
+        <div id="alerts-section" class="section">
+            <h2>Buat Alert Baru</h2>
+            <div class="alert-form">
+                <input type="text" id="alert-symbol" placeholder="Kode saham">
+                <select id="alert-type">
+                    <option value="PRICE_ABOVE">Harga Naik di atas</option>
+                    <option value="PRICE_BELOW">Harga Turun di bawah</option>
+                </select>
+                <input type="number" id="alert-value" placeholder="Target harga">
+                <button class="btn btn-primary" onclick="createAlert()">Buat Alert</button>
+            </div>
+            <h2>Active Alerts</h2>
+            <div id="active-alerts"></div>
+            <h2>Triggered Alerts</h2>
+            <div id="triggered-alerts"></div>
+        </div>
+
+        <div id="monitor-section" class="section">
+            <h2>Live Price Monitor</h2>
+            <div class="controls">
+                <div class="monitor-control">
+                    <label>Monitor Status:</label>
+                    <span id="monitor-status" class="status-badge status-off">STOPPED</span>
+                </div>
+                <div class="monitor-control">
+                    <label>Interval (detik):</label>
+                    <input type="number" id="monitor-interval" value="60" min="10" max="300">
+                </div>
+                <button class="btn btn-success" onclick="startMonitor()">Start</button>
+                <button class="btn btn-danger" onclick="stopMonitor()">Stop</button>
+                <button class="btn btn-primary" onclick="refreshMonitorStatus()">Refresh Status</button>
+            </div>
+            <h3>Live Prices</h3>
+            <div id="live-prices" class="stock-grid"></div>
+            <h3>Monitor Log</h3>
+            <div id="monitor-log" class="log-container"></div>
+        </div>
+
+        <div id="notifications-section" class="section">
+            <h2>Notification Settings</h2>
+            <div class="notification-grid">
+                <div class="notification-card">
+                    <h3>Email Notification</h3>
+                    <div class="indicator-row">
+                        <span>Status:</span>
+                        <span id="email-status">Loading...</span>
+                    </div>
+                    <input type="email" id="email-address" placeholder="your@email.com">
+                    <button class="btn btn-primary" onclick="testEmail()">Test Email</button>
+                </div>
+                <div class="notification-card">
+                    <h3>Telegram Notification</h3>
+                    <div class="indicator-row">
+                        <span>Status:</span>
+                        <span id="telegram-status">Loading...</span>
+                    </div>
+                    <p style="color:#888;font-size:0.85rem">Set TELEGRAM_BOT_TOKEN & TELEGRAM_CHAT_ID di .env</p>
+                    <button class="btn btn-primary" onclick="testTelegram()">Test Telegram</button>
+                </div>
+            </div>
+            <div class="setup-guide">
+                <h3>Setup Guide</h3>
+                <pre>
+# Buat file .env di folder project:
+
+# Email (Gmail)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+
+# Telegram
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+                </pre>
+            </div>
+        </div>
+
+        <div id="horizon-section" class="section">
+            <h2>Investment Horizon Analysis</h2>
+            <p style="color:#888;margin-bottom:15px">Analisis apakah saham bagus untuk dibeli berdasarkan jangka waktu investasi Anda.</p>
+
+            <div class="controls" style="margin-bottom:20px">
+                <input type="text" id="hz-symbol" placeholder="Kode saham (misal: BBCA)" onkeypress="if(event.key==='Enter') analyzeHorizon()">
+                <select id="hz-months">
+                    <option value="1">1 Bulan</option>
+                    <option value="3" selected>3 Bulan</option>
+                    <option value="6">6 Bulan</option>
+                    <option value="12">12 Bulan (1 Tahun)</option>
+                </select>
+                <button class="btn btn-primary" onclick="analyzeHorizon()">Analisis Horizon</button>
+                <button class="btn btn-success" onclick="analyzeAllHorizons()">Semua Horizon</button>
+            </div>
+
+            <div id="horizon-result"></div>
+        </div>
+
+        <div id="reports-section" class="section">
+            <div class="controls">
+                <input type="text" id="report-symbols" placeholder="Saham (pisahkan koma)" value="BBCA,BBRI,TLKM">
+                <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
+            </div>
+            <div id="report-result"></div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
