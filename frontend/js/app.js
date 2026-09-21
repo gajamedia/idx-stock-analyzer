@@ -411,9 +411,9 @@ function renderAnalysis(data) {
             </div>
             <div class="indicator-row">
                 <span class="indicator-label">ATR</span>
-                <span class="indicator-value">${tech.atr || "N/A"}</span>
+                <span class="indicator-value">${tech.atr?.value || "N/A"}${tech.atr?.percent ? ` (${tech.atr.percent}%)` : ""}</span>
             </div>
-            <h4 style="margin-top:20px;color:#4ecca3">Trading Signals</h4>
+            <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">Trading Signals</h4>
             <ul class="signal-list">
                 ${tech.signals?.map(s => `
                     <li>
@@ -422,6 +422,40 @@ function renderAnalysis(data) {
                     </li>
                 `).join("") || ""}
             </ul>
+
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06)">
+                <h3 style="border-bottom:none;padding-bottom:0;margin-bottom:10px">Sentiment Analysis</h3>
+                <div class="indicator-row">
+                    <span class="indicator-label">Overall Sentiment</span>
+                    <span class="indicator-value ${sent?.overall_sentiment?.includes('BULLISH') ? 'value-positive' : sent?.overall_sentiment?.includes('BEARISH') ? 'value-neutral' : ''}">${sent?.overall_sentiment || "N/A"}</span>
+                </div>
+                <div class="indicator-row">
+                    <span class="indicator-label">Score</span>
+                    <span class="indicator-value">${sent?.sentiment_score || "N/A"}</span>
+                </div>
+                <div class="indicator-row">
+                    <span class="indicator-label">News Analyzed</span>
+                    <span class="indicator-value">${sent?.news_count || 0}</span>
+                </div>
+                <div class="indicator-row">
+                    <span class="indicator-label">Positive</span>
+                    <span class="indicator-value value-positive">${sent?.positive_count || 0}</span>
+                </div>
+                <div class="indicator-row">
+                    <span class="indicator-label">Negative</span>
+                    <span class="indicator-value value-negative">${sent?.negative_count || 0}</span>
+                </div>
+                ${sent?.news?.length > 0 ? `
+                    <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">Berita Terbaru</h4>
+                    ${sent.news.map(n => `
+                        <div style="padding:8px;margin:4px 0;background:#16213e;border-radius:5px">
+                            <p style="font-weight:bold;font-size:0.85rem">${n.title}</p>
+                            <p style="font-size:0.8rem;color:#888">${n.snippet?.substring(0, 100)}...</p>
+                            <span class="signal ${signalClass(n.sentiment_label === 'POSITIVE' ? 'BUY' : n.sentiment_label === 'NEGATIVE' ? 'SELL' : 'HOLD')}" style="font-size:0.7rem">${n.sentiment_label}</span>
+                        </div>
+                    `).join("")}
+                ` : ""}
+            </div>
         </div>
 
         <div class="analysis-card">
@@ -440,6 +474,12 @@ function renderAnalysis(data) {
                     ` : ""}
                 </div>
             ` : ""}
+            ${fund?.sector ? `
+                <div style="margin-bottom:12px;padding:6px 10px;background:#1a1a2e;border-left:3px solid #e94560;border-radius:4px;font-size:0.8rem">
+                    <span style="color:#e94560;font-weight:bold">${fund.sector}</span>
+                    ${fund.sector_description ? `<span style="color:#888;display:block;margin-top:2px">${fund.sector_description}</span>` : ""}
+                </div>
+            ` : ""}
             ${fund?.revenue != null ? `
             <div class="indicator-row">
                 <span class="indicator-label">Revenue</span>
@@ -452,73 +492,129 @@ function renderAnalysis(data) {
                 <span class="indicator-value ${fund.net_profit < 0 ? 'value-negative' : 'value-positive'}">${formatLargeNumber(fund.net_profit)}</span>
             </div>
             ` : ""}
-            ${fund?.gross_margin != null ? `
-            <div class="indicator-row">
-                <span class="indicator-label">Gross Margin</span>
-                <span class="indicator-value">${fund.gross_margin}%</span>
-            </div>
-            ` : ""}
-            <div class="indicator-row">
-                <span class="indicator-label">PE Ratio</span>
-                <span class="indicator-value">${fund?.valuation?.details?.[0]?.value || "N/A"}</span>
-            </div>
-            <div class="indicator-row">
-                <span class="indicator-label">PB Ratio</span>
-                <span class="indicator-value">${fund?.valuation?.details?.[1]?.value || "N/A"}</span>
-            </div>
-            <div class="indicator-row">
-                <span class="indicator-label">ROE</span>
-                <span class="indicator-value">${fund?.quality?.details?.[0]?.value || "N/A"}</span>
-            </div>
-            <div class="indicator-row">
-                <span class="indicator-label">Profit Margin</span>
-                <span class="indicator-value">${fund?.quality?.details?.[1]?.value || "N/A"}</span>
-            </div>
-            <div class="indicator-row">
-                <span class="indicator-label">Debt/Equity</span>
-                <span class="indicator-value">${fund?.financial_health?.details?.[0]?.value || "N/A"}</span>
-            </div>
-            <div class="indicator-row">
-                <span class="indicator-label">Dividend</span>
-                <span class="indicator-value">${fund?.dividend?.value || "N/A"} ${fund?.dividend?.status || ""}</span>
-            </div>
-            <p style="margin-top:15px;padding:10px;background:#16213e;border-radius:5px">
-                <strong>Score:</strong> ${fund?.total_score} | <strong>Rekomendasi:</strong> ${fund?.recommendation}
-            </p>
-        </div>
 
-        <div class="analysis-card">
-            <h3>Sentiment Analysis</h3>
-            <div class="indicator-row">
-                <span class="indicator-label">Overall Sentiment</span>
-                <span class="indicator-value ${sent?.overall_sentiment?.includes('BULLISH') ? 'value-positive' : sent?.overall_sentiment?.includes('BEARISH') ? 'value-neutral' : ''}">${sent?.overall_sentiment || "N/A"}</span>
-            </div>
-            <div class="indicator-row">
-                <span class="indicator-label">Score</span>
-                <span class="indicator-value">${sent?.sentiment_score || "N/A"}</span>
-            </div>
-            <div class="indicator-row">
-                <span class="indicator-label">News Analyzed</span>
-                <span class="indicator-value">${sent?.news_count || 0}</span>
-            </div>
-            <div class="indicator-row">
-                <span class="indicator-label">Positive</span>
-                <span class="indicator-value value-positive">${sent?.positive_count || 0}</span>
-            </div>
-            <div class="indicator-row">
-                <span class="indicator-label">Negative</span>
-                <span class="indicator-value value-negative">${sent?.negative_count || 0}</span>
-            </div>
-            ${sent?.news?.length > 0 ? `
-                <h4 style="margin-top:15px;color:#4ecca3">Berita Terbaru</h4>
-                ${sent.news.map(n => `
-                    <div style="padding:10px;margin:5px 0;background:#16213e;border-radius:5px">
-                        <p style="font-weight:bold">${n.title}</p>
-                        <p style="font-size:0.85rem;color:#888">${n.snippet?.substring(0, 100)}...</p>
-                        <span class="signal ${signalClass(n.sentiment_label === 'POSITIVE' ? 'BUY' : n.sentiment_label === 'NEGATIVE' ? 'SELL' : 'HOLD')}" style="font-size:0.75rem">${n.sentiment_label}</span>
+            <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">VALUATION</h4>
+            ${fund?.valuation?.details?.map(d => `
+                <div class="indicator-row">
+                    <span class="indicator-label">${d.metric}</span>
+                    <span class="indicator-value ${d.score > 0 ? 'value-positive' : d.score < 0 ? 'value-negative' : 'value-neutral'}">${d.value} <span style="font-size:0.7rem;color:#888">${d.status}</span></span>
+                </div>
+            `).join("") || ""}
+
+            <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">QUALITY</h4>
+            ${fund?.quality?.details?.map(d => `
+                <div class="indicator-row">
+                    <span class="indicator-label">${d.metric}</span>
+                    <span class="indicator-value ${d.score > 0 ? 'value-positive' : d.score < 0 ? 'value-negative' : 'value-neutral'}">${d.value} <span style="font-size:0.7rem;color:#888">${d.status}</span></span>
+                </div>
+            `).join("") || ""}
+
+            <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">FINANCIAL HEALTH</h4>
+            ${fund?.financial_health?.details?.map(d => `
+                <div class="indicator-row">
+                    <span class="indicator-label">${d.metric}</span>
+                    <span class="indicator-value ${d.score > 0 ? 'value-positive' : d.score < 0 ? 'value-negative' : 'value-neutral'}">${d.value} <span style="font-size:0.7rem;color:#888">${d.status}</span></span>
+                </div>
+            `).join("") || ""}
+
+            ${fund?.growth?.details?.length > 0 ? `
+                <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">GROWTH</h4>
+                ${fund.growth.details.map(d => `
+                    <div class="indicator-row">
+                        <span class="indicator-label">${d.metric}</span>
+                        <span class="indicator-value ${d.score > 0 ? 'value-positive' : d.score < 0 ? 'value-negative' : 'value-neutral'}">${d.value} <span style="font-size:0.7rem;color:#888">${d.status}</span></span>
                     </div>
                 `).join("")}
             ` : ""}
+
+            ${fund?.dupont?.details?.length > 0 ? `
+                <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">DUPONT ANALYSIS</h4>
+                ${fund.dupont.details.map(d => `
+                    <div class="indicator-row">
+                        <span class="indicator-label">${d.component}</span>
+                        <span class="indicator-value">${d.value} <span style="font-size:0.7rem;color:#888">${d.assessment}</span></span>
+                    </div>
+                `).join("")}
+            ` : ""}
+
+            ${fund?.dividend?.details?.length > 0 ? `
+                <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">DIVIDEND</h4>
+                ${fund.dividend.details.map(d => `
+                    <div class="indicator-row">
+                        <span class="indicator-label">${d.metric}</span>
+                        <span class="indicator-value">${d.value} <span style="font-size:0.7rem;color:#888">${d.status}</span></span>
+                    </div>
+                `).join("")}
+            ` : ""}
+
+            ${fund?.piotroski ? `
+                <h4 style="margin-top:15px;color:#e94560;font-size:0.85rem">PIOTROSKI F-SCORE</h4>
+                <div style="margin-bottom:8px;padding:8px;background:#1a1a2e;border-radius:5px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="color:#ccc;font-size:0.85rem">Score</span>
+                        <span style="color:${fund.piotroski.score >= 7 ? '#4CAF50' : fund.piotroski.score >= 5 ? '#FFC107' : '#EF5350'};font-size:1.1rem;font-weight:bold">${fund.piotroski.score} / ${fund.piotroski.max_score}</span>
+                    </div>
+                    <p style="color:#888;font-size:0.75rem;margin:4px 0 0 0">${fund.piotroski.assessment}</p>
+                </div>
+                ${fund.piotroski.details?.map(d => `
+                    <div class="indicator-row" style="font-size:0.78rem">
+                        <span class="indicator-label">${d.indicator}</span>
+                        <span class="indicator-value" style="color:${d.score > 0 ? '#4CAF50' : '#EF5350'}">${d.value}</span>
+                    </div>
+                `).join("") || ""}
+            ` : ""}
+
+            ${fund?.altman_z ? `
+                <h4 style="margin-top:15px;color:#e94560;font-size:0.85rem">ALTMAN Z-SCORE</h4>
+                <div style="margin-bottom:8px;padding:8px;background:#1a1a2e;border-radius:5px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="color:#ccc;font-size:0.85rem">Z-Score</span>
+                        <span style="color:${fund.altman_z.zone === 'SAFE' ? '#4CAF50' : fund.altman_z.zone === 'GREY' ? '#FFC107' : '#EF5350'};font-size:1.1rem;font-weight:bold">${fund.altman_z.score ?? 'N/A'}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+                        <span style="color:#888;font-size:0.8rem">Zone</span>
+                        <span style="color:${fund.altman_z.zone === 'SAFE' ? '#4CAF50' : fund.altman_z.zone === 'GREY' ? '#FFC107' : '#EF5350'};font-size:0.85rem;font-weight:bold">${fund.altman_z.zone}</span>
+                    </div>
+                    <p style="color:#888;font-size:0.75rem;margin:4px 0 0 0">${fund.altman_z.assessment}</p>
+                </div>
+                ${fund.altman_z.details?.map(d => `
+                    <div class="indicator-row" style="font-size:0.78rem">
+                        <span class="indicator-label">${d.component}</span>
+                        <span class="indicator-value">${d.value} <span style="font-size:0.65rem;color:#666">${d.weight || ''}</span></span>
+                    </div>
+                `).join("") || ""}
+            ` : ""}
+
+            ${fund?.magic_formula ? `
+                <h4 style="margin-top:15px;color:#e94560;font-size:0.85rem">MAGIC FORMULA</h4>
+                <div style="margin-bottom:8px;padding:8px;background:#1a1a2e;border-radius:5px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="color:#ccc;font-size:0.85rem">Magic Rank</span>
+                        <span style="color:${fund.magic_formula.magic_rank === 'TOP TIER' || fund.magic_formula.magic_rank === 'STRONG' ? '#4CAF50' : fund.magic_formula.magic_rank === 'AVERAGE' ? '#FFC107' : '#EF5350'};font-size:0.9rem;font-weight:bold">${fund.magic_formula.magic_rank || 'N/A'}</span>
+                    </div>
+                    ${fund.magic_formula.magic_score ? `
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+                            <span style="color:#888;font-size:0.8rem">Magic Score</span>
+                            <span style="color:#ccc;font-size:0.85rem">${fund.magic_formula.magic_score}</span>
+                        </div>
+                    ` : ""}
+                </div>
+                ${fund.magic_formula.details?.map(d => `
+                    <div class="indicator-row" style="font-size:0.78rem">
+                        <span class="indicator-label">${d.metric}</span>
+                        <span class="indicator-value">${d.value} <span style="font-size:0.65rem;color:#666">${d.formula || ''}</span></span>
+                    </div>
+                `).join("") || ""}
+            ` : ""}
+
+            <div style="margin-top:15px;padding:10px;background:#16213e;border-radius:5px;display:flex;justify-content:space-between;align-items:center">
+                <div>
+                    <span style="color:#888;font-size:0.85rem">Score: <strong style="color:#4ecca3">${fund?.total_score || 0}</strong></span>
+                </div>
+                <div style="text-align:right">
+                    <span style="font-size:0.85rem;color:#ccc">${fund?.recommendation || "N/A"}</span>
+                </div>
+            </div>
         </div>
 
         <div class="analysis-card full-width">
@@ -728,44 +824,129 @@ async function generateReport() {
 
 // Financial Data Manager
 function showAddFinancialForm() {
+    document.getElementById("fin-symbol").disabled = false;
+    document.getElementById("fin-period").disabled = false;
+    window._editMode = false;
+    window._editPeriod = null;
+    document.querySelector("#add-financial-form h3").textContent = "Tambah/Update Data Keuangan";
     document.getElementById("add-financial-form").style.display = "block";
 }
 
 function hideAddFinancialForm() {
     document.getElementById("add-financial-form").style.display = "none";
     document.getElementById("fin-symbol").value = "";
+    document.getElementById("fin-period").value = "";
+    document.getElementById("fin-sector").value = "";
+    document.getElementById("fin-market-cap").value = "";
+    document.getElementById("fin-revenue").value = "";
+    document.getElementById("fin-net-profit").value = "";
+    document.getElementById("fin-total-assets").value = "";
+    document.getElementById("fin-total-equity").value = "";
+    document.getElementById("fin-total-debt").value = "";
+    document.getElementById("fin-pe").value = "";
+    document.getElementById("fin-pb").value = "";
+    document.getElementById("fin-roe").value = "";
+    document.getElementById("fin-roa").value = "";
+    document.getElementById("fin-gross-margin").value = "";
+    document.getElementById("fin-net-margin").value = "";
+    document.getElementById("fin-de").value = "";
+    document.getElementById("fin-div").value = "";
+    window._editMode = false;
+    window._editPeriod = null;
+    document.querySelector("#add-financial-form h3").textContent = "Tambah/Update Data Keuangan";
+}
+
+async function editFinancial(symbol, period) {
+    try {
+        const res = await fetchJSON(`/api/financial/${symbol}`);
+        const d = res.data;
+        if (!d) return alert("Data tidak ditemukan");
+
+        document.getElementById("fin-symbol").value = d.symbol || "";
+        document.getElementById("fin-period").value = d.period || "";
+        document.getElementById("fin-sector").value = d.sector || "";
+        document.getElementById("fin-market-cap").value = d.market_cap || "";
+        document.getElementById("fin-revenue").value = d.revenue || "";
+        document.getElementById("fin-net-profit").value = d.net_profit || "";
+        document.getElementById("fin-total-assets").value = d.total_assets || "";
+        document.getElementById("fin-total-equity").value = d.total_equity || "";
+        document.getElementById("fin-total-debt").value = d.total_debt || "";
+        document.getElementById("fin-pe").value = d.pe_ratio || "";
+        document.getElementById("fin-pb").value = d.pb_ratio || "";
+        document.getElementById("fin-roe").value = d.roe ? (d.roe * 100) : "";
+        document.getElementById("fin-roa").value = d.roa ? (d.roa * 100) : "";
+        document.getElementById("fin-gross-margin").value = d.gross_margin ? (d.gross_margin * 100) : "";
+        document.getElementById("fin-net-margin").value = d.net_margin ? (d.net_margin * 100) : "";
+        document.getElementById("fin-de").value = d.debt_to_equity || "";
+        document.getElementById("fin-div").value = d.dividend_yield ? (d.dividend_yield * 100) : "";
+
+        window._editMode = true;
+        window._editPeriod = period;
+        document.getElementById("add-financial-form").style.display = "block";
+        document.querySelector("#add-financial-form h3").textContent = `Edit Data Keuangan ${symbol}`;
+        document.getElementById("fin-symbol").disabled = true;
+        document.getElementById("fin-period").disabled = true;
+    } catch (e) {
+        alert("Gagal memuat data: " + e.message);
+    }
+}
+
+async function deleteFinancial(symbol, period) {
+    if (!confirm(`Hapus data keuangan ${symbol} periode ${period}?`)) return;
+    try {
+        const res = await fetch(API_BASE + `/api/financial/${symbol}/${period}`, { method: "DELETE" });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.detail || "Gagal menghapus");
+        showToast("Berhasil", `Data ${symbol} periode ${period} dihapus`);
+        loadAllFinancialData();
+    } catch (e) {
+        alert("Error: " + e.message);
+    }
 }
 
 async function saveFinancialData() {
     const symbol = document.getElementById("fin-symbol").value.trim().toUpperCase();
     if (!symbol) return alert("Masukkan kode saham!");
 
+    const num = (id) => { const v = document.getElementById(id).value; return v !== "" ? parseFloat(v) : null; };
+
     const data = {
         symbol: symbol,
         period: document.getElementById("fin-period").value || null,
-        revenue: parseFloat(document.getElementById("fin-revenue").value) || null,
-        net_profit: parseFloat(document.getElementById("fin-net-profit").value) || null,
-        total_assets: parseFloat(document.getElementById("fin-total-assets").value) || null,
-        total_equity: parseFloat(document.getElementById("fin-total-equity").value) || null,
-        total_debt: parseFloat(document.getElementById("fin-total-debt").value) || null,
-        pe_ratio: parseFloat(document.getElementById("fin-pe").value) || null,
-        pb_ratio: parseFloat(document.getElementById("fin-pb").value) || null,
-        roe: parseFloat(document.getElementById("fin-roe").value) / 100 || null,
-        roa: parseFloat(document.getElementById("fin-roa").value) / 100 || null,
-        gross_margin: parseFloat(document.getElementById("fin-gross-margin").value) / 100 || null,
-        net_margin: parseFloat(document.getElementById("fin-net-margin").value) / 100 || null,
-        debt_to_equity: parseFloat(document.getElementById("fin-de").value) || null,
-        dividend_yield: parseFloat(document.getElementById("fin-div").value) / 100 || null,
+        sector: document.getElementById("fin-sector").value || null,
+        market_cap: num("fin-market-cap"),
+        revenue: num("fin-revenue"),
+        net_profit: num("fin-net-profit"),
+        total_assets: num("fin-total-assets"),
+        total_equity: num("fin-total-equity"),
+        total_debt: num("fin-total-debt"),
+        pe_ratio: num("fin-pe"),
+        pb_ratio: num("fin-pb"),
+        roe: num("fin-roe") !== null ? num("fin-roe") / 100 : null,
+        roa: num("fin-roa") !== null ? num("fin-roa") / 100 : null,
+        gross_margin: num("fin-gross-margin") !== null ? num("fin-gross-margin") / 100 : null,
+        net_margin: num("fin-net-margin") !== null ? num("fin-net-margin") / 100 : null,
+        debt_to_equity: num("fin-de"),
+        dividend_yield: num("fin-div") !== null ? num("fin-div") / 100 : null,
     };
 
     try {
-        const res = await fetch(API_BASE + "/api/financial/update", {
-            method: "POST",
+        const isEdit = window._editMode && window._editPeriod;
+        const url = isEdit
+            ? API_BASE + `/api/financial/${symbol}/${window._editPeriod}`
+            : API_BASE + "/api/financial/update";
+        const method = isEdit ? "PUT" : "POST";
+
+        const res = await fetch(url, {
+            method: method,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
         const result = await res.json();
-        showToast("Berhasil", `Data keuangan ${symbol} berhasil disimpan`);
+        if (!res.ok) throw new Error(result.detail || "Gagal menyimpan");
+        showToast("Berhasil", isEdit
+            ? `Data ${symbol} periode ${window._editPeriod} berhasil diupdate`
+            : `Data keuangan ${symbol} berhasil disimpan`);
         hideAddFinancialForm();
         loadAllFinancialData();
     } catch (e) {
@@ -933,7 +1114,21 @@ async function loadAllFinancialData() {
                     <div class="fin-header">
                         <span class="fin-symbol">${s.symbol}</span>
                         <span class="fin-period">${s.period || "N/A"}</span>
+                        <div class="fin-actions">
+                            <button class="btn btn-sm" onclick="editFinancial('${s.symbol}', '${s.period}')">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteFinancial('${s.symbol}', '${s.period}')">Hapus</button>
+                        </div>
                     </div>
+                    ${s.sector || s.market_cap ? `
+                    <div class="fin-metric">
+                        <div class="label">Sektor</div>
+                        <div class="value">${s.sector || "N/A"}</div>
+                    </div>
+                    <div class="fin-metric">
+                        <div class="label">Market Cap</div>
+                        <div class="value">${s.market_cap ? formatRupiah(s.market_cap * 1000000000) : "N/A"}</div>
+                    </div>
+                    ` : ""}
                     <div class="fin-metric">
                         <div class="label">Revenue</div>
                         <div class="value">${s.revenue ? formatRupiah(s.revenue * 1000000000) : "N/A"}</div>
@@ -1176,7 +1371,7 @@ async function analyzeFullWatchlist() {
                     <span class="signal ${signalClass(tech.overall_signal)}">${tech.overall_signal || "N/A"}</span>
                     <div style="margin-top:10px;font-size:0.8rem;color:#888">
                         <p>RSI: ${tech.rsi || "N/A"} | PE: ${fund.valuation?.details?.[0]?.value || "N/A"}</p>
-                        <p>${fund.recommendation || ""}</p>
+                        <p style="color:${fund.total_score > 0 ? '#4CAF50' : fund.total_score < 0 ? '#EF5350' : '#888'}">Score: ${fund.total_score || 0} | ${fund.recommendation || ""}</p>
                     </div>
                     ${s.notes ? `<p style="margin-top:5px;font-size:0.75rem;color:#666;font-style:italic">"${s.notes}"</p>` : ""}
                 </div>
@@ -1464,37 +1659,57 @@ function renderAllHorizonsResult(data) {
                         <span>Trend</span>
                         <span>${h.technical?.trend?.trend || "N/A"}</span>
                     </div>
+                    ${h.position_sizing?.recommended_allocation ? `
+                        <div class="hz-detail">
+                            <span>Position Size</span>
+                            <span style="color:#4ecca3;font-weight:bold">${h.position_sizing.recommended_allocation.recommended_pct}%</span>
+                        </div>
+                        <div class="hz-detail">
+                            <span>Conviction</span>
+                            <span>${h.position_sizing.recommended_allocation.conviction_level}</span>
+                        </div>
+                    ` : ""}
+                    ${h.holding_period_estimate?.scenarios ? `
+                        <div class="hz-detail">
+                            <span>Bull Case</span>
+                            <span class="target-profit">+${h.holding_period_estimate.scenarios.bull?.return_pct || 0}%</span>
+                        </div>
+                        <div class="hz-detail">
+                            <span>Bear Case</span>
+                            <span class="target-loss">${h.holding_period_estimate.scenarios.bear?.return_pct || 0}%</span>
+                        </div>
+                    ` : ""}
                 </div>
                 ${h.detailed_analysis ? `
-                    <div class="hz-card-analysis" style="margin-top:15px;border-top:1px solid #333;padding-top:12px">
+                    <div class="hz-card-analysis" style="margin-top:10px;border-top:1px solid #333;padding-top:8px">
                         ${h.detailed_analysis.strengths?.length > 0 ? `
-                            <div style="margin-bottom:8px">
-                                <span style="color:#4CAF50;font-size:0.8rem;font-weight:bold">KEKUATAN</span>
-                                ${h.detailed_analysis.strengths.map(s => `<p style="font-size:0.8rem;color:#ccc;margin:4px 0">+ ${s}</p>`).join("")}
+                            <div style="margin-bottom:6px">
+                                <span style="color:#4CAF50;font-size:0.75rem;font-weight:bold">KEKUATAN</span>
+                                ${h.detailed_analysis.strengths.map(s => `<p style="font-size:0.75rem;color:#ccc;margin:3px 0">+ ${s}</p>`).join("")}
                             </div>
                         ` : ""}
                         ${h.detailed_analysis.weaknesses?.length > 0 ? `
-                            <div style="margin-bottom:8px">
-                                <span style="color:#EF5350;font-size:0.8rem;font-weight:bold">KELEMAHAN</span>
-                                ${h.detailed_analysis.weaknesses.map(w => `<p style="font-size:0.8rem;color:#ccc;margin:4px 0">- ${w}</p>`).join("")}
+                            <div style="margin-bottom:6px">
+                                <span style="color:#EF5350;font-size:0.75rem;font-weight:bold">KELEMAHAN</span>
+                                ${h.detailed_analysis.weaknesses.map(w => `<p style="font-size:0.75rem;color:#ccc;margin:3px 0">- ${w}</p>`).join("")}
                             </div>
                         ` : ""}
                         ${h.detailed_analysis.opportunities?.length > 0 ? `
-                            <div style="margin-bottom:8px">
-                                <span style="color:#2196F3;font-size:0.8rem;font-weight:bold">PELUANG</span>
-                                ${h.detailed_analysis.opportunities.map(o => `<p style="font-size:0.8rem;color:#ccc;margin:4px 0">! ${o}</p>`).join("")}
+                            <div style="margin-bottom:6px">
+                                <span style="color:#2196F3;font-size:0.75rem;font-weight:bold">PELUANG</span>
+                                ${h.detailed_analysis.opportunities.map(o => `<p style="font-size:0.75rem;color:#ccc;margin:3px 0">! ${o}</p>`).join("")}
                             </div>
                         ` : ""}
                         ${h.detailed_analysis.risks?.length > 0 ? `
-                            <div style="margin-bottom:8px">
-                                <span style="color:#FF9800;font-size:0.8rem;font-weight:bold">RISIKO</span>
-                                ${h.detailed_analysis.risks.map(r => `<p style="font-size:0.8rem;color:#ccc;margin:4px 0">! ${r}</p>`).join("")}
+                            <div style="margin-bottom:6px">
+                                <span style="color:#FF9800;font-size:0.75rem;font-weight:bold">RISIKO</span>
+                                ${h.detailed_analysis.risks.map(r => `<p style="font-size:0.75rem;color:#ccc;margin:3px 0">! ${r}</p>`).join("")}
                             </div>
                         ` : ""}
                         ${h.detailed_analysis.action_plan?.length > 0 ? `
-                            <div style="margin-bottom:8px">
-                                <span style="color:#4ecca3;font-size:0.8rem;font-weight:bold">RENCANA AKSI</span>
-                                ${h.detailed_analysis.action_plan.map(a => `<p style="font-size:0.8rem;color:#ccc;margin:4px 0">> ${a}</p>`).join("")}
+                            <div style="margin-bottom:6px">
+                                <span style="color:#4ecca3;font-size:0.75rem;font-weight:bold">RENCANA AKSI</span>
+                                ${h.detailed_analysis.action_plan.map(a => `<p style="font-size:0.75rem;color:#ccc;margin:3px 0">> ${a}</p>`).join("")}
                             </div>
                         ` : ""}
                     </div>
@@ -1508,6 +1723,12 @@ function renderAllHorizonsResult(data) {
     html += `
         <div class="horizon-fundamental-summary">
             <h4>Fundamental Summary</h4>
+            ${fundamental.sector ? `
+                <div style="margin-bottom:10px;padding:6px 10px;background:#1a1a2e;border-left:3px solid #e94560;border-radius:4px;font-size:0.8rem">
+                    <span style="color:#e94560;font-weight:bold">${fundamental.sector}</span>
+                    ${fundamental.sector_description ? `<span style="color:#888;display:block;margin-top:2px">${fundamental.sector_description}</span>` : ""}
+                </div>
+            ` : ""}
             ${fundamental.report_info?.period ? `
                 <div style="margin-bottom:10px;padding:6px 10px;background:#0f3460;border-left:3px solid #4ecca3;border-radius:4px;font-size:0.8rem">
                     <span style="color:#4ecca3;font-weight:bold">${fundamental.report_info.period}</span>
@@ -1522,12 +1743,112 @@ function renderAllHorizonsResult(data) {
                 </div>
             ` : ""}
             <div class="fund-summary-grid">
-                <div class="fund-item"><span>Valuation Score</span><span>${fundamental.valuation?.score || 0}</span></div>
-                <div class="fund-item"><span>Quality Score</span><span>${fundamental.quality?.score || 0}</span></div>
-                <div class="fund-item"><span>Health Score</span><span>${fundamental.financial_health?.score || 0}</span></div>
-                <div class="fund-item"><span>Total Score</span><span>${fundamental.total_score || 0}</span></div>
-                <div class="fund-item"><span>Recommendation</span><span>${fundamental.recommendation || "N/A"}</span></div>
-                <div class="fund-item"><span>Sentiment</span><span>${sentiment.overall_sentiment || "N/A"}</span></div>
+                <div class="fund-item"><span>Valuation</span><span style="color:${fundamental.valuation?.score > 0 ? '#4CAF50' : fundamental.valuation?.score < 0 ? '#EF5350' : '#888'}">${fundamental.valuation?.score || 0}</span></div>
+                <div class="fund-item"><span>Quality</span><span style="color:${fundamental.quality?.score > 0 ? '#4CAF50' : fundamental.quality?.score < 0 ? '#EF5350' : '#888'}">${fundamental.quality?.score || 0}</span></div>
+                <div class="fund-item"><span>Health</span><span style="color:${fundamental.financial_health?.score > 0 ? '#4CAF50' : fundamental.financial_health?.score < 0 ? '#EF5350' : '#888'}">${fundamental.financial_health?.score || 0}</span></div>
+                <div class="fund-item"><span>Growth</span><span style="color:${fundamental.growth?.score > 0 ? '#4CAF50' : fundamental.growth?.score < 0 ? '#EF5350' : '#888'}">${fundamental.growth?.score || 0}</span></div>
+                <div class="fund-item"><span>DuPont</span><span style="color:${fundamental.dupont?.score > 0 ? '#4CAF50' : fundamental.dupont?.score < 0 ? '#EF5350' : '#888'}">${fundamental.dupont?.score || 0}</span></div>
+                <div class="fund-item"><span>Total Score</span><span style="font-weight:bold;color:#4ecca3">${fundamental.total_score || 0}</span></div>
+            </div>
+            ${fundamental.valuation?.details?.length > 0 ? `
+                <div style="margin-top:10px">
+                    <span style="color:#888;font-size:0.75rem;font-weight:bold">VALUATION DETAILS</span>
+                    ${fundamental.valuation.details.map(d => `
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.8rem;border-bottom:1px solid #222">
+                            <span style="color:#aaa">${d.metric}</span>
+                            <span style="color:${d.score > 0 ? '#4CAF50' : d.score < 0 ? '#EF5350' : '#ccc'}">${d.value} <span style="color:#666;font-size:0.7rem">${d.status}</span></span>
+                        </div>
+                    `).join("")}
+                </div>
+            ` : ""}
+            ${fundamental.quality?.details?.length > 0 ? `
+                <div style="margin-top:10px">
+                    <span style="color:#888;font-size:0.75rem;font-weight:bold">QUALITY DETAILS</span>
+                    ${fundamental.quality.details.map(d => `
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.8rem;border-bottom:1px solid #222">
+                            <span style="color:#aaa">${d.metric}</span>
+                            <span style="color:${d.score > 0 ? '#4CAF50' : d.score < 0 ? '#EF5350' : '#ccc'}">${d.value} <span style="color:#666;font-size:0.7rem">${d.status}</span></span>
+                        </div>
+                    `).join("")}
+                </div>
+            ` : ""}
+            ${fundamental.financial_health?.details?.length > 0 ? `
+                <div style="margin-top:10px">
+                    <span style="color:#888;font-size:0.75rem;font-weight:bold">FINANCIAL HEALTH</span>
+                    ${fundamental.financial_health.details.map(d => `
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.8rem;border-bottom:1px solid #222">
+                            <span style="color:#aaa">${d.metric}</span>
+                            <span style="color:${d.score > 0 ? '#4CAF50' : d.score < 0 ? '#EF5350' : '#ccc'}">${d.value} <span style="color:#666;font-size:0.7rem">${d.status}</span></span>
+                        </div>
+                    `).join("")}
+                </div>
+            ` : ""}
+            ${fundamental.growth?.details?.length > 0 ? `
+                <div style="margin-top:10px">
+                    <span style="color:#888;font-size:0.75rem;font-weight:bold">GROWTH</span>
+                    ${fundamental.growth.details.map(d => `
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.8rem;border-bottom:1px solid #222">
+                            <span style="color:#aaa">${d.metric}</span>
+                            <span style="color:${d.score > 0 ? '#4CAF50' : d.score < 0 ? '#EF5350' : '#ccc'}">${d.value} <span style="color:#666;font-size:0.7rem">${d.status}</span></span>
+                        </div>
+                    `).join("")}
+                </div>
+            ` : ""}
+            ${fundamental.dupont?.details?.length > 0 ? `
+                <div style="margin-top:10px">
+                    <span style="color:#888;font-size:0.75rem;font-weight:bold">DUPONT ANALYSIS</span>
+                    ${fundamental.dupont.details.map(d => `
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.8rem;border-bottom:1px solid #222">
+                            <span style="color:#aaa">${d.component}</span>
+                            <span style="color:#ccc">${d.value} <span style="color:#666;font-size:0.7rem">${d.assessment}</span></span>
+                        </div>
+                    `).join("")}
+                </div>
+            ` : ""}
+            ${fundamental.dividend?.details?.length > 0 ? `
+                <div style="margin-top:10px">
+                    <span style="color:#888;font-size:0.75rem;font-weight:bold">DIVIDEND</span>
+                    ${fundamental.dividend.details.map(d => `
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.8rem;border-bottom:1px solid #222">
+                            <span style="color:#aaa">${d.metric}</span>
+                            <span style="color:#ccc">${d.value} <span style="color:#666;font-size:0.7rem">${d.status}</span></span>
+                        </div>
+                    `).join("")}
+                </div>
+            ` : ""}
+
+            ${fundamental.piotroski ? `
+                <div style="margin-top:10px;padding:8px;background:#1a1a2e;border-radius:5px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="color:#e94560;font-size:0.75rem;font-weight:bold">PIOTROSKI F-SCORE</span>
+                        <span style="color:${fundamental.piotroski.score >= 7 ? '#4CAF50' : fundamental.piotroski.score >= 5 ? '#FFC107' : '#EF5350'};font-weight:bold">${fundamental.piotroski.score}/${fundamental.piotroski.max_score}</span>
+                    </div>
+                    <p style="color:#888;font-size:0.7rem;margin:2px 0 0 0">${fundamental.piotroski.assessment}</p>
+                </div>
+            ` : ""}
+
+            ${fundamental.altman_z ? `
+                <div style="margin-top:6px;padding:8px;background:#1a1a2e;border-radius:5px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="color:#e94560;font-size:0.75rem;font-weight:bold">ALTMAN Z-SCORE</span>
+                        <span style="color:${fundamental.altman_z.zone === 'SAFE' ? '#4CAF50' : fundamental.altman_z.zone === 'GREY' ? '#FFC107' : '#EF5350'};font-weight:bold">${fundamental.altman_z.score ?? 'N/A'} (${fundamental.altman_z.zone})</span>
+                    </div>
+                </div>
+            ` : ""}
+
+            ${fundamental.magic_formula?.magic_rank ? `
+                <div style="margin-top:6px;padding:8px;background:#1a1a2e;border-radius:5px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="color:#e94560;font-size:0.75rem;font-weight:bold">MAGIC FORMULA</span>
+                        <span style="color:${fundamental.magic_formula.magic_rank === 'TOP TIER' || fundamental.magic_formula.magic_rank === 'STRONG' ? '#4CAF50' : fundamental.magic_formula.magic_rank === 'AVERAGE' ? '#FFC107' : '#EF5350'};font-weight:bold">${fundamental.magic_formula.magic_rank}</span>
+                    </div>
+                    ${fundamental.magic_formula.magic_score ? `<p style="color:#888;font-size:0.7rem;margin:2px 0 0 0">Score: ${fundamental.magic_formula.magic_score}</p>` : ""}
+                </div>
+            ` : ""}
+
+            <div style="margin-top:12px;padding:8px 10px;background:#16213e;border-radius:5px">
+                <span style="color:#888;font-size:0.8rem">Recommendation: </span>
+                <span style="color:#4ecca3;font-weight:bold">${fundamental.recommendation || "N/A"}</span>
             </div>
         </div>
     `;

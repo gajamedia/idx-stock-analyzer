@@ -372,6 +372,72 @@ def get_all_financial_data():
     return [dict(row) for row in rows]
 
 
+def delete_financial_data(symbol, period):
+    db = get_db()
+    try:
+        db.execute(
+            "DELETE FROM financial_data WHERE symbol = ? AND period = ?",
+            (symbol.upper(), period)
+        )
+        db.commit()
+        db.execute(
+            "INSERT INTO update_history (symbol, status, message) VALUES (?, ?, ?)",
+            (symbol.upper(), "success", f"Deleted financial data for period {period}")
+        )
+        db.commit()
+        return {"status": "deleted", "symbol": symbol.upper(), "period": period}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    finally:
+        db.close()
+
+
+def update_financial_data(data):
+    db = get_db()
+    try:
+        symbol = data.get("symbol", "").upper()
+        period = data.get("period")
+        if not symbol or not period:
+            return {"status": "error", "message": "symbol and period are required"}
+
+        fields = [
+            "sector", "market_cap", "company_name", "industry", "current_price",
+            "revenue", "net_profit", "eps", "pe_ratio", "pb_ratio",
+            "roe", "roa", "gross_margin", "net_margin", "debt_to_equity",
+            "dividend_yield", "total_assets", "total_equity", "total_debt"
+        ]
+        updates = []
+        values = []
+        for f in fields:
+            if f in data and data[f] is not None:
+                updates.append(f"{f} = ?")
+                values.append(data[f])
+
+        if not updates:
+            return {"status": "error", "message": "No fields to update"}
+
+        updates.append("updated_at = ?")
+        values.append(datetime.now().isoformat())
+        values.extend([symbol, period])
+
+        db.execute(
+            f"UPDATE financial_data SET {', '.join(updates)} WHERE symbol = ? AND period = ?",
+            values
+        )
+        db.commit()
+
+        db.execute(
+            "INSERT INTO update_history (symbol, status, message) VALUES (?, ?, ?)",
+            (symbol, "success", f"Manual edit for period {period}")
+        )
+        db.commit()
+        return {"status": "updated", "symbol": symbol, "period": period}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    finally:
+        db.close()
+
+
 def get_update_history(symbol=None, limit=50):
     db = get_db()
     if symbol:

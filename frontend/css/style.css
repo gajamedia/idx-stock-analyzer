@@ -460,7 +460,8 @@ header h1 {
 .analysis-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 16px;
+    align-items: start;
 }
 
 .analysis-card {
@@ -468,7 +469,7 @@ header h1 {
     backdrop-filter: blur(16px);
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
-    padding: 24px;
+    padding: 20px;
     transition: all var(--transition);
 }
 
@@ -478,12 +479,20 @@ header h1 {
 
 .analysis-card h3 {
     color: var(--accent);
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
     border-bottom: 1px solid var(--border-color);
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 0.95rem;
     letter-spacing: -0.01em;
+}
+
+.analysis-card h4 {
+    color: var(--accent);
+    margin: 12px 0 6px 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .analysis-card.full-width {
@@ -497,7 +506,7 @@ header h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 0;
+    padding: 6px 0;
     border-bottom: 1px solid rgba(255,255,255,0.03);
     transition: background var(--transition);
 }
@@ -507,12 +516,12 @@ header h1 {
 
 .indicator-label {
     color: var(--text-secondary);
-    font-size: 0.88rem;
+    font-size: 0.82rem;
 }
 
 .indicator-value {
     font-weight: 600;
-    font-size: 0.92rem;
+    font-size: 0.85rem;
     color: var(--text-primary);
 }
 
@@ -1110,6 +1119,38 @@ header h1 {
     margin-bottom: 12px;
 }
 
+.fin-item .fin-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.fin-item .fin-actions .btn-sm {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    background: var(--bg-glass);
+    color: var(--text-primary);
+    transition: all 0.2s;
+}
+
+.fin-item .fin-actions .btn-sm:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.fin-item .fin-actions .btn-danger {
+    color: #f44336;
+    border-color: #f44336;
+}
+
+.fin-item .fin-actions .btn-danger:hover {
+    background: #f44336;
+    color: #fff;
+}
+
 .fin-item .fin-symbol {
     color: var(--accent);
     font-weight: 700;
@@ -1626,26 +1667,26 @@ header h1 {
 /* ========================================
    HORIZON ALL VIEW
    ======================================== */
-.horizon-all-header { margin-bottom: 24px; }
-.horizon-all-header h3 { color: var(--text-primary); font-weight: 700; }
+.horizon-all-header { margin-bottom: 16px; }
+.horizon-all-header h3 { color: var(--text-primary); font-weight: 700; font-size: 1rem; }
 
 .horizon-summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-    margin-bottom: 28px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
 }
 
 .horizon-summary-card {
     background: var(--bg-glass);
     border-radius: var(--radius);
-    padding: 20px;
+    padding: 16px;
     border: 1px solid var(--border-color);
     transition: all var(--transition);
 }
 
 .horizon-summary-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
 
@@ -1659,20 +1700,20 @@ header h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .hz-card-header h4 {
     color: var(--text-primary);
     margin: 0;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 600;
 }
 
 .hz-rec {
-    font-size: 0.72rem;
-    padding: 4px 12px;
-    border-radius: 14px;
+    font-size: 0.68rem;
+    padding: 3px 10px;
+    border-radius: 12px;
     font-weight: 700;
     letter-spacing: 0.03em;
 }
@@ -1685,21 +1726,21 @@ header h1 {
 
 .hz-card-score {
     color: var(--text-secondary);
-    font-size: 0.85rem;
-    margin-bottom: 14px;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
 }
 
 .hz-card-details {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .hz-detail {
     display: flex;
     justify-content: space-between;
-    font-size: 0.85rem;
-    padding: 5px 0;
+    font-size: 0.8rem;
+    padding: 4px 0;
     border-bottom: 1px solid rgba(255,255,255,0.03);
 }
 
@@ -1710,29 +1751,30 @@ header h1 {
 .horizon-fundamental-summary {
     background: var(--bg-glass);
     border-radius: var(--radius);
-    padding: 20px;
+    padding: 16px;
     border: 1px solid var(--border-color);
 }
 
 .horizon-fundamental-summary h4 {
     color: var(--accent);
-    margin: 0 0 14px 0;
+    margin: 0 0 10px 0;
     font-weight: 600;
+    font-size: 0.85rem;
 }
 
 .fund-summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
 }
 
 .fund-item {
     display: flex;
     justify-content: space-between;
-    padding: 10px 14px;
+    padding: 6px 10px;
     background: var(--bg-glass);
     border-radius: var(--radius-xs);
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     border: 1px solid var(--border-color);
 }
 

@@ -25,7 +25,8 @@ from monitor import monitor
 from database import init_db, watchlist_add, watchlist_remove, watchlist_get_all, watchlist_clear
 from financial_updater import (
     auto_fetch_and_save, get_financial_data, get_all_financial_data,
-    get_update_history, batch_auto_fetch, save_financial_data
+    get_update_history, batch_auto_fetch, save_financial_data,
+    delete_financial_data, update_financial_data
 )
 from horizon import analyze_horizon, get_all_horizons
 
@@ -67,6 +68,8 @@ class NotificationConfig(BaseModel):
 class FinancialUpdateRequest(BaseModel):
     symbol: str
     period: Optional[str] = None
+    sector: Optional[str] = None
+    market_cap: Optional[float] = None
     revenue: Optional[float] = None
     net_profit: Optional[float] = None
     eps: Optional[float] = None
@@ -366,7 +369,11 @@ async def notification_status():
 
 @app.post("/api/financial/update")
 async def update_financial(request: FinancialUpdateRequest):
-    manual_data = {}
+    manual_data = {"symbol": request.symbol.upper()}
+    if request.sector:
+        manual_data["sector"] = request.sector
+    if request.market_cap is not None:
+        manual_data["market_cap"] = request.market_cap
     for field in ["period", "revenue", "net_profit", "eps", "pe_ratio", "pb_ratio",
                    "roe", "roa", "gross_margin", "net_margin", "debt_to_equity",
                    "dividend_yield", "total_assets", "total_equity", "total_debt"]:
@@ -461,6 +468,33 @@ async def get_financial(symbol: str):
     return {"symbol": symbol.upper(), "data": data}
 
 
+@app.put("/api/financial/{symbol}/{period}")
+async def edit_financial(symbol: str, period: str, request: FinancialUpdateRequest):
+    update_data = {"symbol": symbol.upper(), "period": period}
+    for field in ["sector", "market_cap", "revenue", "net_profit", "eps", "pe_ratio", "pb_ratio",
+                   "roe", "roa", "gross_margin", "net_margin", "debt_to_equity",
+                   "dividend_yield", "total_assets", "total_equity", "total_debt"]:
+        val = getattr(request, field)
+        if val is not None:
+            update_data[field] = val
+    if request.sector:
+        update_data["sector"] = request.sector
+    if request.market_cap is not None:
+        update_data["market_cap"] = request.market_cap
+    result = update_financial_data(update_data)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
+
+
+@app.delete("/api/financial/{symbol}/{period}")
+async def delete_financial(symbol: str, period: str):
+    result = delete_financial_data(symbol, period)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
+
+
 @app.get("/api/financial")
 async def list_financial_data():
     data = get_all_financial_data()
@@ -523,6 +557,7 @@ async def get_horizon_analysis(symbol: str, months: int = Query(3, ge=1, le=12))
     stock_info = fetch_stock_info(symbol)
     fundamental = analyze_fundamental(stock_info)
     sentiment = analyze_sentiment(symbol)
+    benchmark = fetch_stock_history("^JKSE", period="1y")
 
     result = analyze_horizon(
         daily_data=history,
@@ -530,6 +565,7 @@ async def get_horizon_analysis(symbol: str, months: int = Query(3, ge=1, le=12))
         horizon_months=months,
         sentiment_data=sentiment,
         fundamental_data=fundamental,
+        benchmark_data=benchmark,
     )
 
     return {
@@ -551,12 +587,14 @@ async def get_all_horizon_analysis(symbol: str):
     stock_info = fetch_stock_info(symbol)
     fundamental = analyze_fundamental(stock_info)
     sentiment = analyze_sentiment(symbol)
+    benchmark = fetch_stock_history("^JKSE", period="1y")
 
     all_horizons = get_all_horizons(
         daily_data=history,
         stock_info=stock_info,
         sentiment_data=sentiment,
         fundamental_data=fundamental,
+        benchmark_data=benchmark,
     )
 
     return {
@@ -578,6 +616,7 @@ async def post_horizon_analysis(request: HorizonRequest):
     stock_info = fetch_stock_info(symbol)
     fundamental = analyze_fundamental(stock_info)
     sentiment = analyze_sentiment(symbol)
+    benchmark = fetch_stock_history("^JKSE", period="1y")
 
     result = analyze_horizon(
         daily_data=history,
@@ -585,6 +624,7 @@ async def post_horizon_analysis(request: HorizonRequest):
         horizon_months=request.horizon_months,
         sentiment_data=sentiment,
         fundamental_data=fundamental,
+        benchmark_data=benchmark,
     )
 
     return {

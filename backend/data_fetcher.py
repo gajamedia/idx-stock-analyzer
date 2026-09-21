@@ -158,7 +158,7 @@ def fetch_stock_info(symbol):
                 "net_profit": row["net_profit"],
             }
             for key, val in db_fields.items():
-                if val is not None and (key not in db_info or db_info[key] is None):
+                if val is not None:
                     db_info[key] = val
     except Exception as e:
         print(f"DB fallback error for {symbol}: {e}")
