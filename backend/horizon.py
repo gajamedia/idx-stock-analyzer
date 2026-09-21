@@ -1216,15 +1216,26 @@ def analyze_horizon(daily_data, stock_info, horizon_months=3, sentiment_data=Non
 
     sentiment_score = 0
     sentiment_label = "NEUTRAL"
+    sentiment_momentum = 0
     if sentiment_data:
         sentiment_score = sentiment_data.get("sentiment_score", 0.5)
         sentiment_label = sentiment_data.get("overall_sentiment", "NEUTRAL")
+        momentum_data = sentiment_data.get("momentum", {})
+        sentiment_momentum = momentum_data.get("momentum", 0)
+
         if sentiment_score > 0.6:
             tf_score += 1
             tf_details.append({"factor": "Sentiment", "value": sentiment_label, "impact": 1})
         elif sentiment_score < 0.4:
             tf_score -= 1
             tf_details.append({"factor": "Sentiment", "value": sentiment_label, "impact": -1})
+
+        if sentiment_momentum > 0.1:
+            tf_score += 1
+            tf_details.append({"factor": "Sentiment Momentum", "value": "+{:.2f}".format(sentiment_momentum), "impact": 1})
+        elif sentiment_momentum < -0.1:
+            tf_score -= 1
+            tf_details.append({"factor": "Sentiment Momentum", "value": "{:.2f}".format(sentiment_momentum), "impact": -1})
 
     if fundamental_data:
         val_score = fundamental_data.get("valuation", {}).get("score", 0)
@@ -1290,6 +1301,7 @@ def analyze_horizon(daily_data, stock_info, horizon_months=3, sentiment_data=Non
         "sentiment": {
             "label": sentiment_label,
             "score": sentiment_score,
+            "momentum": sentiment_momentum,
         },
         "fundamental_score": fundamental_score,
         "benchmark": compare_with_benchmark(daily_data, benchmark_data, horizon_months) if benchmark_data else None,

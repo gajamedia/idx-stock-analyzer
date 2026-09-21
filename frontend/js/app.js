@@ -427,11 +427,15 @@ function renderAnalysis(data) {
                 <h3 style="border-bottom:none;padding-bottom:0;margin-bottom:10px">Sentiment Analysis</h3>
                 <div class="indicator-row">
                     <span class="indicator-label">Overall Sentiment</span>
-                    <span class="indicator-value ${sent?.overall_sentiment?.includes('BULLISH') ? 'value-positive' : sent?.overall_sentiment?.includes('BEARISH') ? 'value-neutral' : ''}">${sent?.overall_sentiment || "N/A"}</span>
+                    <span class="indicator-value ${sent?.overall_sentiment?.includes('BULLISH') ? 'value-positive' : sent?.overall_sentiment?.includes('BEARISH') ? 'value-negative' : ''}">${sent?.overall_sentiment || "N/A"}</span>
                 </div>
                 <div class="indicator-row">
-                    <span class="indicator-label">Score</span>
+                    <span class="indicator-label">Score (Adjusted)</span>
                     <span class="indicator-value">${sent?.sentiment_score || "N/A"}</span>
+                </div>
+                <div class="indicator-row">
+                    <span class="indicator-label">Raw Score</span>
+                    <span class="indicator-value">${sent?.avg_raw_sentiment || "N/A"}</span>
                 </div>
                 <div class="indicator-row">
                     <span class="indicator-label">News Analyzed</span>
@@ -445,13 +449,64 @@ function renderAnalysis(data) {
                     <span class="indicator-label">Negative</span>
                     <span class="indicator-value value-negative">${sent?.negative_count || 0}</span>
                 </div>
+
+                ${sent?.momentum ? `
+                    <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">MOMENTUM (7d vs 30d)</h4>
+                    <div class="indicator-row">
+                        <span class="indicator-label">Recent Avg</span>
+                        <span class="indicator-value">${sent.momentum.recent_avg}</span>
+                    </div>
+                    <div class="indicator-row">
+                        <span class="indicator-label">Older Avg</span>
+                        <span class="indicator-value">${sent.momentum.older_avg}</span>
+                    </div>
+                    <div class="indicator-row">
+                        <span class="indicator-label">Momentum</span>
+                        <span class="indicator-value ${sent.momentum.momentum > 0 ? 'value-positive' : sent.momentum.momentum < 0 ? 'value-negative' : ''}">${sent.momentum.momentum > 0 ? '+' : ''}${sent.momentum.momentum}</span>
+                    </div>
+                    <div class="indicator-row">
+                        <span class="indicator-label">Status</span>
+                        <span class="indicator-value" style="color:${sent.momentum.momentum_label?.includes('IMPROVING') ? '#4CAF50' : sent.momentum.momentum_label?.includes('DETERIORATING') ? '#EF5350' : '#888'};font-weight:bold;font-size:0.75rem">${sent.momentum.momentum_label || "N/A"}</span>
+                    </div>
+                ` : ""}
+
+                ${sent?.distribution ? `
+                    <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">DISTRIBUTION</h4>
+                    <div class="indicator-row" style="font-size:0.75rem">
+                        <span class="indicator-label" style="color:#4CAF50">Very Positive</span>
+                        <span class="indicator-value">${sent.distribution.very_positive || 0}</span>
+                    </div>
+                    <div class="indicator-row" style="font-size:0.75rem">
+                        <span class="indicator-label" style="color:#8BC34A">Positive</span>
+                        <span class="indicator-value">${sent.distribution.positive || 0}</span>
+                    </div>
+                    <div class="indicator-row" style="font-size:0.75rem">
+                        <span class="indicator-label" style="color:#888">Neutral</span>
+                        <span class="indicator-value">${sent.distribution.neutral || 0}</span>
+                    </div>
+                    <div class="indicator-row" style="font-size:0.75rem">
+                        <span class="indicator-label" style="color:#FF9800">Negative</span>
+                        <span class="indicator-value">${sent.distribution.negative || 0}</span>
+                    </div>
+                    <div class="indicator-row" style="font-size:0.75rem">
+                        <span class="indicator-label" style="color:#EF5350">Very Negative</span>
+                        <span class="indicator-value">${sent.distribution.very_negative || 0}</span>
+                    </div>
+                ` : ""}
+
                 ${sent?.news?.length > 0 ? `
                     <h4 style="margin-top:12px;color:#4ecca3;font-size:0.8rem">Berita Terbaru</h4>
                     ${sent.news.map(n => `
                         <div style="padding:8px;margin:4px 0;background:#16213e;border-radius:5px">
-                            <p style="font-weight:bold;font-size:0.85rem">${n.title}</p>
-                            <p style="font-size:0.8rem;color:#888">${n.snippet?.substring(0, 100)}...</p>
-                            <span class="signal ${signalClass(n.sentiment_label === 'POSITIVE' ? 'BUY' : n.sentiment_label === 'NEGATIVE' ? 'SELL' : 'HOLD')}" style="font-size:0.7rem">${n.sentiment_label}</span>
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                                <span style="font-weight:bold;font-size:0.8rem">${n.title}</span>
+                            </div>
+                            <p style="font-size:0.75rem;color:#888;margin:2px 0">${n.snippet?.substring(0, 80)}...</p>
+                            <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+                                <span class="signal ${signalClass(n.sentiment_label === 'POSITIVE' ? 'BUY' : n.sentiment_label === 'NEGATIVE' ? 'SELL' : 'HOLD')}" style="font-size:0.65rem">${n.sentiment_label}</span>
+                                <span style="font-size:0.65rem;color:#666">Score: ${n.sentiment_score}</span>
+                                <span style="font-size:0.65rem;color:#666">Source: ${n.source}</span>
+                            </div>
                         </div>
                     `).join("")}
                 ` : ""}
