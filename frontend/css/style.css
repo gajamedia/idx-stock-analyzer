@@ -1983,6 +1983,356 @@ header h1 {
 }
 
 /* ========================================
+   KONSULTASI INVESTASI
+   ======================================== */
+.consult-add-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.lot-source { opacity: 0.75; font-size: 0.85em; font-weight: 400; }
+
+.consult-add-form input {
+    flex: 1;
+    min-width: 140px;
+    padding: 10px 14px;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+}
+
+.consult-add-form input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.consult-holdings { margin-top: 8px; }
+
+.consult-mode-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.consult-mode-tab {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--text-primary);
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.consult-mode-tab:hover {
+    border-color: var(--accent);
+}
+
+.consult-mode-tab.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.consult-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-card);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.consult-table th,
+.consult-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+}
+
+.consult-table th {
+    background: var(--bg-glass);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.consult-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.consult-summary-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.consult-summary-item .label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.consult-summary-item .value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.consult-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0 4px;
+}
+
+.consult-chip {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.consult-chip.chip-cut-loss,
+.consult-chip.chip-exit { border-color: #e94560; color: #e94560; }
+.consult-chip.chip-trim { border-color: #ffa502; color: #ffa502; }
+.consult-chip.chip-average-down { border-color: #4ecca3; color: #4ecca3; }
+.consult-chip.chip-hold { border-color: var(--accent); color: var(--accent); }
+.consult-chip.chip-buy_now,
+.consult-chip.chip-buy-now { border-color: #4ecca3; color: #4ecca3; }
+.consult-chip.chip-wait { border-color: #ffa502; color: #ffa502; }
+.consult-chip.chip-avoid { border-color: #e94560; color: #e94560; }
+
+.consult-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--border-color);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-top: 16px;
+}
+
+.consult-decision-bear { border-left-color: #e94560; }
+.consult-decision-warn { border-left-color: #ffa502; }
+.consult-decision-info { border-left-color: #4ea3ff; }
+.consult-decision-hold { border-left-color: var(--accent); }
+.consult-decision-buy { border-left-color: #4ecca3; }
+.consult-decision-wait { border-left-color: #ffa502; }
+.consult-decision-avoid { border-left-color: #e94560; }
+.consult-error { border-left-color: #e94560; }
+
+.consult-card-header { margin-bottom: 12px; }
+
+.consult-card-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.consult-card-title h3 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.consult-card-title .company-name {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.consult-decision {
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    padding: 5px 12px;
+    border-radius: 999px;
+    text-transform: uppercase;
+}
+
+.consult-decision.dec-bear { background: rgba(233, 69, 96, 0.15); color: #e94560; border: 1px solid #e94560; }
+.consult-decision.dec-warn { background: rgba(255, 165, 2, 0.12); color: #ffa502; border: 1px solid #ffa502; }
+.consult-decision.dec-info { background: rgba(78, 163, 255, 0.12); color: #4ea3ff; border: 1px solid #4ea3ff; }
+.consult-decision.dec-hold { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); }
+.consult-decision.dec-buy { background: rgba(78, 204, 163, 0.15); color: #4ecca3; border: 1px solid #4ecca3; }
+.consult-decision.dec-wait { background: rgba(255, 165, 2, 0.12); color: #ffa502; border: 1px solid #ffa502; }
+.consult-decision.dec-avoid { background: rgba(233, 69, 96, 0.15); color: #e94560; border: 1px solid #e94560; }
+
+.consult-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+.pnl-pos { color: var(--accent) !important; }
+.pnl-neg { color: #e94560 !important; }
+
+.consult-reason {
+    background: var(--bg-glass);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.consult-levels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+}
+
+.consult-levels b { color: var(--text-primary); }
+
+.consult-analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.consult-analysis-box {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.consult-analysis-box h4 {
+    color: var(--accent);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 6px 0;
+}
+
+.consult-analysis-box p {
+    margin: 2px 0;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+}
+
+.consult-steps h4 {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    margin: 0 0 8px 0;
+}
+
+.consult-steps ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.consult-steps li {
+    color: var(--text-primary);
+    font-size: 0.87rem;
+    line-height: 1.55;
+    margin-bottom: 6px;
+}
+
+.consult-factors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.factor-col {
+    background: var(--bg-glass);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.factor-col h5 {
+    margin: 0 0 6px 0;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.factor-bull h5 { color: var(--accent); }
+.factor-bear h5 { color: #e94560; }
+
+.factor-col ul {
+    margin: 0;
+    padding-left: 16px;
+}
+
+.factor-col li {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+.consult-risks {
+    margin-top: 12px;
+    background: rgba(255, 165, 2, 0.06);
+    border: 1px solid rgba(255, 165, 2, 0.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.consult-risks h5 {
+    margin: 0 0 6px 0;
+    color: #ffa502;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+}
+
+.consult-risks ul { margin: 0; padding-left: 16px; }
+
+.consult-risks li {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.consult-disclaimer {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    line-height: 1.5;
+    margin-top: 14px;
+    opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+    .consult-add-form input { min-width: 100%; }
+    .consult-card-meta { gap: 8px; }
+    .consult-table { font-size: 0.8rem; }
+    .consult-table th,
+    .consult-table td { padding: 8px 8px; }
+}
+
+/* ========================================
    RESPONSIVE — TABLET (< 1024px)
    ======================================== */
 @media (max-width: 1024px) {

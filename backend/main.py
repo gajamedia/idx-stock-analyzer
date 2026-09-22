@@ -22,13 +22,17 @@ from alerts import create_alert, get_active_alerts, check_alerts, delete_alert, 
 from reporter import generate_report, generate_quick_summary
 from notifications import email_notifier, telegram_notifier
 from monitor import monitor
-from database import init_db, watchlist_add, watchlist_remove, watchlist_get_all, watchlist_clear
+from database import (
+    init_db, watchlist_add, watchlist_remove, watchlist_get_all, watchlist_clear,
+    portfolio_get_all, portfolio_upsert, portfolio_delete, portfolio_clear,
+)
 from financial_updater import (
     auto_fetch_and_save, get_financial_data, get_all_financial_data,
     get_update_history, batch_auto_fetch, save_financial_data,
     delete_financial_data, update_financial_data
 )
 from horizon import analyze_horizon, get_all_horizons
+from consultation import analyze_portfolio_consultation, analyze_entry_consultation
 
 try:
     from multi_source_fetcher import multi_source_fetcher, SOURCE_LABELS
@@ -88,6 +92,23 @@ class FinancialUpdateRequest(BaseModel):
 
 class BatchUpdateRequest(BaseModel):
     symbols: List[str]
+
+
+class PortfolioHoldingRequest(BaseModel):
+    symbol: str
+    lots: float
+    avg_price: float
+
+
+class ConsultationRequest(BaseModel):
+    horizon_months: int = 3
+
+
+class EntryConsultationRequest(BaseModel):
+    symbols: List[str]
+    horizon_months: int = 3
+    capital: Optional[float] = None
+    lots: Optional[int] = None
 
 
 class ConnectionManager:
@@ -651,3 +672,62 @@ async def analyze_portfolio(symbols: str = Query("BBCA,BBRI,TLKM")):
             })
 
     return {"portfolio": results}
+
+
+@app.get("/api/portfolio")
+async def get_portfolio():
+    return {"holdings": portfolio_get_all()}
+
+
+@app.post("/api/portfolio")
+async def upsert_portfolio_holding(request: PortfolioHoldingRequest):
+    symbol = request.symbol.strip().upper()
+    if not symbol:
+        raise HTTPException(status_code=400, detail="Symbol wajib diisi")
+    if request.lots <= 0:
+        raise HTTPException(status_code=400, detail="Lots harus lebih dari 0")
+    if request.avg_price <= 0:
+        raise HTTPException(status_code=400, detail="Average price harus lebih dari 0")
+    return portfolio_upsert(symbol, request.lots, request.avg_price)
+
+
+@app.delete("/api/portfolio/{symbol}")
+async def delete_portfolio_holding(symbol: str):
+    return portfolio_delete(symbol)
+
+
+@app.delete("/api/portfolio")
+async def clear_portfolio():
+    return portfolio_clear()
+
+
+@app.post("/api/consultation/analyze")
+async def run_consultation(request: ConsultationRequest):
+    holdings = portfolio_get_all()
+    if not holdings:
+        raise HTTPException(status_code=400, detail="Belum ada holdings. Tambahkan emiten terlebih dahulu.")
+    if request.horizon_months < 1 or request.horizon_months > 12:
+        raise HTTPException(status_code=400, detail="horizon_months harus 1-12")
+    return analyze_portfolio_consultation(holdings, horizon_months=request.horizon_months)
+
+
+@app.post("/api/consultation/entry")
+async def run_entry_consultation(request: EntryConsultationRequest):
+    symbols = [s.strip().upper() for s in (request.symbols or []) if s and s.strip()]
+    symbols = [s for s in symbols if s]
+    if not symbols:
+        raise HTTPException(status_code=400, detail="Minimal satu emiten harus diberikan.")
+    if len(symbols) > 20:
+        raise HTTPException(status_code=400, detail="Maksimal 20 emiten per konsultasi.")
+    if request.horizon_months < 1 or request.horizon_months > 12:
+        raise HTTPException(status_code=400, detail="horizon_months harus 1-12")
+    if request.capital is not None and request.capital <= 0:
+        raise HTTPException(status_code=400, detail="capital harus lebih dari 0")
+    if request.lots is not None and request.lots < 1:
+        raise HTTPException(status_code=400, detail="lots harus lebih dari 0")
+    return analyze_entry_consultation(
+        symbols,
+        horizon_months=request.horizon_months,
+        capital=request.capital,
+        lots=request.lots,
+    )

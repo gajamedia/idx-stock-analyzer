@@ -54,15 +54,42 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS portfolio (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            symbol TEXT NOT NULL,
-            buy_price REAL NOT NULL,
-            quantity INTEGER NOT NULL,
+            symbol TEXT NOT NULL UNIQUE,
+            lots REAL NOT NULL,
+            avg_price REAL NOT NULL,
             buy_date TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
+    _migrate_portfolio_table(cursor)
+
     conn.commit()
     conn.close()
+
+
+def _migrate_portfolio_table(cursor):
+    cols = [row[1] for row in cursor.execute("PRAGMA table_info(portfolio)").fetchall()]
+    if not cols or "lots" in cols:
+        return
+
+    count = cursor.execute("SELECT COUNT(*) FROM portfolio").fetchone()[0]
+    if count == 0:
+        cursor.execute("DROP TABLE portfolio")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS portfolio (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL UNIQUE,
+                lots REAL NOT NULL,
+                avg_price REAL NOT NULL,
+                buy_date TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        return
+
+    cursor.execute("ALTER TABLE portfolio ADD COLUMN lots REAL NOT NULL DEFAULT 0")
+    cursor.execute("ALTER TABLE portfolio ADD COLUMN avg_price REAL NOT NULL DEFAULT 0")
+    cursor.execute("UPDATE portfolio SET avg_price = buy_price")
+    cursor.execute("UPDATE portfolio SET lots = CASE WHEN quantity >= 100 THEN quantity / 100.0 ELSE quantity END")
 
 
 def watchlist_add(symbol, name=None, notes=None):
@@ -105,6 +132,46 @@ def watchlist_exists(symbol):
 def watchlist_clear():
     db = get_db()
     db.execute("DELETE FROM watchlist")
+    db.commit()
+    db.close()
+    return {"status": "cleared"}
+
+
+def portfolio_get_all():
+    db = get_db()
+    rows = db.execute("SELECT * FROM portfolio ORDER BY symbol ASC").fetchall()
+    db.close()
+    return [dict(row) for row in rows]
+
+
+def portfolio_upsert(symbol, lots, avg_price):
+    symbol = symbol.upper()
+    db = get_db()
+    try:
+        db.execute(
+            """
+            INSERT INTO portfolio (symbol, lots, avg_price) VALUES (?, ?, ?)
+            ON CONFLICT(symbol) DO UPDATE SET lots = excluded.lots, avg_price = excluded.avg_price
+            """,
+            (symbol, float(lots), float(avg_price)),
+        )
+        db.commit()
+        return {"status": "saved", "symbol": symbol}
+    finally:
+        db.close()
+
+
+def portfolio_delete(symbol):
+    db = get_db()
+    db.execute("DELETE FROM portfolio WHERE symbol = ?", (symbol.upper(),))
+    db.commit()
+    db.close()
+    return {"status": "removed", "symbol": symbol.upper()}
+
+
+def portfolio_clear():
+    db = get_db()
+    db.execute("DELETE FROM portfolio")
     db.commit()
     db.close()
     return {"status": "cleared"}

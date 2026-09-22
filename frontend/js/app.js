@@ -44,6 +44,7 @@ function showSection(section) {
         monitor: "Live Monitor",
         notifications: "Notifications",
         horizon: "Horizon Analysis",
+        consultation: "Konsultasi Investasi",
         reports: "Reports"
     }[section];
 
@@ -51,6 +52,7 @@ function showSection(section) {
     if (section === "notifications") loadNotificationStatus();
     if (section === "watchlist") loadWatchlistManager();
     if (section === "financial") loadAllFinancialData();
+    if (section === "consultation") loadConsultHoldings();
 }
 
 async function fetchJSON(url) {
@@ -1920,6 +1922,531 @@ function getRecommendationClass(recommendation) {
     if (rec.includes("SELL") || rec.includes("LEAN SELL")) return "rec-sell";
     if (rec.includes("STRONG SELL")) return "rec-strong-sell";
     return "";
+}
+
+// =====================================================
+// Konsultasi Investasi
+// =====================================================
+
+async function loadConsultHoldings() {
+    try {
+        const data = await fetchJSON("/api/portfolio");
+        renderConsultHoldings(data.holdings || []);
+    } catch (e) {
+        console.error("Error loading holdings:", e);
+    }
+}
+
+function renderConsultHoldings(holdings) {
+    const el = document.getElementById("consult-holdings");
+    if (!el) return;
+    if (!holdings.length) {
+        el.innerHTML = '<p style="color:#888;margin-top:12px">Belum ada holdings. Tambahkan emiten Anda di atas.</p>';
+        return;
+    }
+    el.innerHTML = `
+        <table class="consult-table">
+            <thead>
+                <tr><th>Emiten</th><th>Lot</th><th>Lembar</th><th>Avg Price</th><th></th></tr>
+            </thead>
+            <tbody>
+                ${holdings.map(h => `
+                    <tr>
+                        <td><strong>${h.symbol}</strong></td>
+                        <td>${h.lots}</td>
+                        <td>${Math.round(h.lots * 100)}</td>
+                        <td>${formatRupiah(h.avg_price)}</td>
+                        <td style="text-align:right">
+                            <button class="btn btn-sm" style="background:#e94560;color:#fff;padding:4px 10px" onclick="removeConsultHolding('${h.symbol}')">Hapus</button>
+                        </td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+async function addConsultHolding() {
+    const symbol = document.getElementById("consult-symbol").value.trim().toUpperCase();
+    const lots = parseFloat(document.getElementById("consult-lots").value);
+    const avg = parseFloat(document.getElementById("consult-avg").value);
+    if (!symbol || !lots || !avg || lots <= 0 || avg <= 0) {
+        showToast("Input Tidak Lengkap", "Isi emiten, lot (>0), dan average price (>0)", true);
+        return;
+    }
+    try {
+        const res = await fetch(API_BASE + "/api/portfolio", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ symbol, lots, avg_price: avg }),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+        showToast("Holding Disimpan", `${symbol}: ${lots} lot @ ${formatRupiah(avg)}`);
+        document.getElementById("consult-symbol").value = "";
+        document.getElementById("consult-lots").value = "";
+        document.getElementById("consult-avg").value = "";
+        loadConsultHoldings();
+    } catch (e) {
+        showToast("Gagal Menyimpan", e.message, true);
+    }
+}
+
+async function removeConsultHolding(symbol) {
+    try {
+        await fetch(API_BASE + `/api/portfolio/${symbol}`, { method: "DELETE" });
+        showToast("Dihapus", `${symbol} dihapus dari holdings`);
+        loadConsultHoldings();
+    } catch (e) {
+        showToast("Gagal", e.message, true);
+    }
+}
+
+async function runConsultation() {
+    const months = parseInt(document.getElementById("consult-months").value, 10) || 3;
+    const btn = document.getElementById("consult-run-btn");
+    const container = document.getElementById("consult-result");
+    btn.disabled = true;
+    container.innerHTML = '<p style="color:#4ecca3;margin-top:16px">Menganalisis posisi Anda (teknikal, fundamental, sentimen, horizon)... bisa memakan waktu 1-2 menit.</p>';
+    try {
+        const res = await fetch(API_BASE + "/api/consultation/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ horizon_months: months }),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        renderConsultationResults(data);
+    } catch (e) {
+        container.innerHTML = `<p style="color:#e94560;margin-top:16px">Gagal: ${e.message}</p>`;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function renderConsultationResults(data) {
+    const container = document.getElementById("consult-result");
+    const s = data.summary || {};
+    const holdings = data.holdings || [];
+    const pnl = s.total_pnl_pct ?? 0;
+    const pnlClass = pnl > 0 ? "pnl-pos" : pnl < 0 ? "pnl-neg" : "";
+
+    const decisionsChips = Object.entries(s.decisions_count || {})
+        .map(([k, v]) => `<span class="consult-chip chip-${k.toLowerCase().replace(/\s+/g, "-")}">${k}: ${v}</span>`)
+        .join("");
+
+    let html = `
+        <div class="consult-summary">
+            <div class="consult-summary-item">
+                <span class="label">Total Modal</span>
+                <span class="value">${formatRupiah(s.total_cost)}</span>
+            </div>
+            <div class="consult-summary-item">
+                <span class="label">Nilai Sekarang</span>
+                <span class="value">${formatRupiah(s.total_market_value)}</span>
+            </div>
+            <div class="consult-summary-item">
+                <span class="label">P&L Total</span>
+                <span class="value ${pnlClass}">${formatRupiah(s.total_pnl_abs)} (${pnl > 0 ? "+" : ""}${(pnl ?? 0).toFixed(1)}%)</span>
+            </div>
+            <div class="consult-summary-item">
+                <span class="label">Horizon</span>
+                <span class="value">${data.horizon_months} Bulan</span>
+            </div>
+        </div>
+        <div class="consult-chips">${decisionsChips}</div>
+    `;
+
+    for (const h of holdings) {
+        if (h.error) {
+            html += `
+                <div class="consult-card consult-error">
+                    <h3>${h.symbol}</h3>
+                    <p>${h.error}</p>
+                </div>
+            `;
+            continue;
+        }
+        html += renderConsultHoldingCard(h);
+    }
+
+    html += `<p class="consult-disclaimer">${data.disclaimer || ""}</p>`;
+    container.innerHTML = html;
+}
+
+function renderConsultHoldingCard(h) {
+    const m = h.holding || {};
+    const pr = h.price_reference || {};
+    const a = h.analysis || {};
+    const tech = a.technical || {};
+    const fund = a.fundamental || {};
+    const sent = a.sentiment || {};
+    const hz = a.horizon || {};
+    const pnlPct = m.pnl_pct ?? 0;
+    const pnlClass = pnlPct > 0 ? "pnl-pos" : pnlPct < 0 ? "pnl-neg" : "";
+    const color = h.decision_color || "hold";
+
+    const bull = (h.decision_factors?.bullish || []);
+    const bear = (h.decision_factors?.bearish || []);
+
+    return `
+        <div class="consult-card consult-decision-${color}">
+            <div class="consult-card-header">
+                <div class="consult-card-title">
+                    <h3>${h.symbol}${h.company_name ? ` <span class="company-name">${h.company_name}</span>` : ""}</h3>
+                    <span class="consult-decision dec-${color}">${h.decision_label || h.decision}</span>
+                </div>
+                <div class="consult-card-meta">
+                    <span>${m.lots} lot (${m.shares} lembar)</span>
+                    <span>Avg ${formatRupiah(m.avg_price)}</span>
+                    <span>Sekarang ${formatRupiah(m.current_price)}</span>
+                    <span class="${pnlClass}">P&L ${m.pnl_abs > 0 ? "+" : ""}${formatRupiah(m.pnl_abs)} (${pnlPct > 0 ? "+" : ""}${pnlPct.toFixed(1)}%)</span>
+                    ${m.weight_pct != null ? `<span>Bobot ${m.weight_pct.toFixed(1)}%</span>` : ""}
+                </div>
+            </div>
+
+            <div class="consult-reason">
+                <strong>Keputusan:</strong> ${h.decision_reason || ""}
+            </div>
+
+            <div class="consult-levels">
+                <span>Support kritis: <b>${formatRpSafe(pr.critical_support)}</b></span>
+                <span>Stop loss: <b>${formatRpSafe(pr.stop_loss)}</b></span>
+                <span>Target: <b>${formatRpSafe(pr.take_profit)}</b></span>
+                <span>Resistance: <b>${formatRpSafe(pr.resistance)}</b></span>
+            </div>
+
+            <div class="consult-analysis-grid">
+                <div class="consult-analysis-box">
+                    <h4>Technical</h4>
+                    <p>Signal: <b>${tech.signal || "N/A"}</b></p>
+                    <p>RSI: ${tech.rsi ?? "N/A"} | Regime: ${tech.market_regime || "N/A"}</p>
+                    <p>Setup: ${tech.setup || "-"} | Confidence: ${tech.confidence ?? "N/A"}</p>
+                </div>
+                <div class="consult-analysis-box">
+                    <h4>Fundamental</h4>
+                    <p>Skor: <b>${fund.total_score ?? "N/A"}</b></p>
+                    <p>${fund.recommendation_id || fund.recommendation || "N/A"}</p>
+                    <p>Sektor: ${fund.sector || "N/A"}</p>
+                </div>
+                <div class="consult-analysis-box">
+                    <h4>Sentimen</h4>
+                    <p>${sent.overall_sentiment || "N/A"} <b>(${sent.sentiment_score ?? "N/A"})</b></p>
+                    <p>${sent.news_count ?? 0} berita terpantau</p>
+                </div>
+                <div class="consult-analysis-box">
+                    <h4>Horizon ${hz.months || ""} Bulan</h4>
+                    <p>Rekomendasi: <b>${hz.recommendation || "N/A"}</b></p>
+                    <p>Skor: ${hz.score ?? "N/A"}</p>
+                    ${hz.error ? `<p style="color:#e94560">${hz.error}</p>` : ""}
+                </div>
+            </div>
+
+            <div class="consult-steps">
+                <h4>Langkah-Langkah yang Harus Dilakukan</h4>
+                <ol>
+                    ${(h.action_steps || []).map(step => `<li>${step}</li>`).join("")}
+                </ol>
+            </div>
+
+            ${(bull.length || bear.length) ? `
+                <div class="consult-factors">
+                    ${bull.length ? `<div class="factor-col factor-bull"><h5>Faktor Pendukung</h5><ul>${bull.map(x => `<li>${x}</li>`).join("")}</ul></div>` : ""}
+                    ${bear.length ? `<div class="factor-col factor-bear"><h5>Faktor Tekanan</h5><ul>${bear.map(x => `<li>${x}</li>`).join("")}</ul></div>` : ""}
+                </div>
+            ` : ""}
+
+            ${(h.risk_notes || []).length ? `
+                <div class="consult-risks">
+                    <h5>Catatan Risiko</h5>
+                    <ul>${h.risk_notes.map(n => `<li>${n}</li>`).join("")}</ul>
+                </div>
+            ` : ""}
+
+            <p class="consult-disclaimer">${h.disclaimer || ""}</p>
+        </div>
+    `;
+}
+
+function formatRpSafe(v) {
+    if (v == null) return "N/A";
+    return formatRupiah(v);
+}
+
+let consultMode = "holding";
+
+function switchConsultMode(mode) {
+    consultMode = mode;
+    const holdingPanel = document.getElementById("consult-panel-holding");
+    const entryPanel = document.getElementById("consult-panel-entry");
+    const tabHolding = document.getElementById("consult-tab-holding");
+    const tabEntry = document.getElementById("consult-tab-entry");
+    const desc = document.getElementById("consult-desc");
+    const result = document.getElementById("consult-result");
+
+    if (!holdingPanel || !entryPanel) return;
+
+    if (mode === "entry") {
+        holdingPanel.style.display = "none";
+        entryPanel.style.display = "";
+        tabHolding?.classList.remove("active");
+        tabEntry?.classList.add("active");
+        if (desc) desc.textContent = "Belum punya posisi? Masukkan emiten (bisa lebih dari satu) — dapatkan keputusan apakah layak dibeli sekarang (BELI / TUNGGU / HINDARI) berdasarkan teknikal, fundamental, sentimen, dan horizon.";
+    } else {
+        holdingPanel.style.display = "";
+        entryPanel.style.display = "none";
+        tabEntry?.classList.remove("active");
+        tabHolding?.classList.add("active");
+        if (desc) desc.textContent = "Masukkan posisi Anda (emiten, lot, average price) — dapatkan rencana aksi per saham dari analisis teknikal, fundamental, sentimen, dan horizon.";
+    }
+    if (result) result.innerHTML = "";
+}
+
+async function runEntryConsultation() {
+    const symbolsRaw = document.getElementById("entry-symbols").value.trim();
+    const capitalRaw = document.getElementById("entry-capital").value;
+    const lotsRaw = document.getElementById("entry-lots").value;
+    const months = parseInt(document.getElementById("entry-months").value, 10) || 3;
+    const btn = document.getElementById("entry-run-btn");
+    const container = document.getElementById("consult-result");
+
+    const symbols = symbolsRaw.split(/[,\s]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+    if (!symbols.length) {
+        showToast("Input Kosong", "Masukkan minimal satu emiten (misal: BBCA,TLKM)", true);
+        return;
+    }
+    let capital = null;
+    if (capitalRaw !== "") {
+        capital = parseFloat(capitalRaw);
+        if (!capital || capital <= 0) {
+            showToast("Modal Tidak Valid", "Modal harus lebih dari 0 atau dikosongkan", true);
+            return;
+        }
+    }
+    let lots = null;
+    if (lotsRaw !== "") {
+        lots = parseInt(lotsRaw, 10);
+        if (!lots || lots < 1) {
+            showToast("Lot Tidak Valid", "Jumlah lot harus bilangan bulat ≥ 1 atau dikosongkan", true);
+            return;
+        }
+    }
+    if (lots != null && capital != null) {
+        showToast("Info", "Lot diinput — lot menang; modal hanya divalidasi.", false);
+    } else if (lots == null && capital == null) {
+        showToast("Info", "Lot & modal kosong — saran lot memakai % horizon (indikatif).", false);
+    }
+
+    btn.disabled = true;
+    container.innerHTML = '<p style="color:#4ecca3;margin-top:16px">Menganalisis rencana beli untuk ' + symbols.join(", ") + " (teknikal, fundamental, sentimen, horizon)... bisa memakan waktu 1-2 menit.</p>";
+    try {
+        const res = await fetch(API_BASE + "/api/consultation/entry", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ symbols, horizon_months: months, capital, lots }),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        renderEntryConsultationResults(data);
+    } catch (e) {
+        container.innerHTML = `<p style="color:#e94560;margin-top:16px">Gagal: ${e.message}</p>`;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function renderEntryConsultationResults(data) {
+    const container = document.getElementById("consult-result");
+    const s = data.summary || {};
+    const results = data.results || [];
+
+    const decisionsChips = Object.entries(s.decisions_count || {})
+        .map(([k, v]) => `<span class="consult-chip chip-${k.toLowerCase().replace(/\s+/g, "-")}">${k}: ${v}</span>`)
+        .join("");
+
+    const allocationRow = data.capital && s.total_allocation != null
+        ? `
+            <div class="consult-summary-item">
+                <span class="label">Estimasi Alokasi</span>
+                <span class="value">${formatRupiah(s.total_allocation)}</span>
+            </div>`
+        : "";
+
+    let html = `
+        <div class="consult-summary">
+            <div class="consult-summary-item">
+                <span class="label">Emiten Dianalisis</span>
+                <span class="value">${s.analyzed_count ?? results.length}</span>
+            </div>
+            <div class="consult-summary-item">
+                <span class="label">Horizon</span>
+                <span class="value">${data.horizon_months} Bulan</span>
+            </div>
+            <div class="consult-summary-item">
+                <span class="label">Modal</span>
+                <span class="value">${data.capital ? formatRupiah(data.capital) : "-"}</span>
+            </div>
+            ${allocationRow}
+        </div>
+        <div class="consult-chips">${decisionsChips}</div>
+    `;
+
+    for (const r of results) {
+        if (r.error) {
+            html += `
+                <div class="consult-card consult-error">
+                    <h3>${r.symbol}</h3>
+                    <p>${r.error}</p>
+                </div>
+            `;
+            continue;
+        }
+        html += renderEntryCard(r);
+    }
+
+    html += `<p class="consult-disclaimer">${data.disclaimer || ""}</p>`;
+    container.innerHTML = html;
+}
+
+function renderEntryCard(r) {
+    const ep = r.entry_plan || {};
+    const pr = r.price_reference || {};
+    const a = r.analysis || {};
+    const tech = a.technical || {};
+    const fund = a.fundamental || {};
+    const sent = a.sentiment || {};
+    const hz = a.horizon || {};
+    const color = r.decision_color || "hold";
+
+    const bull = (r.decision_factors?.bullish || []);
+    const bear = (r.decision_factors?.bearish || []);
+
+    const entryZone = pr.entry_zone_low != null && pr.entry_zone_high != null
+        ? `${formatRpSafe(pr.entry_zone_low)} – ${formatRpSafe(pr.entry_zone_high)}`
+        : formatRpSafe(ep.current_price);
+
+    const sizingRow = ep.recommended_pct != null
+        ? `<span>Alokasi: <b>${ep.recommended_pct}%</b>${ep.conviction ? ` (${ep.conviction})` : ""}</span>`
+        : "";
+    const lotCostRow = ep.lot_cost
+        ? `<span>Biaya 1 lot: <b>${formatRupiah(ep.lot_cost)}</b></span>`
+        : "";
+    const lotSourceLabels = {
+        input: "dari input lot",
+        from_capital: "dari modal ÷ biaya 1 lot",
+        from_pct: "dari % horizon (indikatif)",
+        none: "AVOID — 0 lot",
+    };
+    let lotsRow = "";
+    if (ep.suggested_lots != null) {
+        const srcLabel = ep.lots_source ? ` <span class="lot-source">(${lotSourceLabels[ep.lots_source] || ep.lots_source})</span>` : "";
+        if (ep.suggested_lots > 0) {
+            lotsRow = `<span>Rencana: <b>${ep.suggested_lots} lot</b>${ep.lots_per_tranche ? ` (±${ep.lots_per_tranche} lot/tranche)` : ""}${srcLabel}</span>`;
+        } else if (ep.insufficient_for_min_lot) {
+            lotsRow = `<span style="color:#e94560"><b>Kurang dari 1 lot</b>${srcLabel}</span>`;
+        } else {
+            lotsRow = `<span>Rencana: <b>0 lot</b>${srcLabel}</span>`;
+        }
+    }
+    const allocRow = ep.allocation_rupiah
+        ? `<span>Estimasi dana: <b>${formatRupiah(ep.allocation_rupiah)}</b>${ep.allocation_pct_of_capital != null ? ` (${ep.allocation_pct_of_capital}% modal)` : ""}</span>`
+        : "";
+    const shortfallRow = ep.insufficient_for_min_lot && ep.min_lot_shortfall
+        ? `<span style="color:#ffa502">Kurang <b>${formatRupiah(ep.min_lot_shortfall)}</b> untuk 1 lot</span>`
+        : "";
+    const capitalShortfallRow = ep.capital_shortfall
+        ? `<span style="color:#e94560">Modal kurang <b>${formatRupiah(ep.capital_shortfall)}</b> untuk rencana ini</span>`
+        : "";
+
+    return `
+        <div class="consult-card consult-decision-${color}">
+            <div class="consult-card-header">
+                <div class="consult-card-title">
+                    <h3>${r.symbol}${r.company_name ? ` <span class="company-name">${r.company_name}</span>` : ""}</h3>
+                    <span class="consult-decision dec-${color}">${r.decision_label || r.decision}</span>
+                </div>
+                <div class="consult-card-meta">
+                    <span>Sekarang ${formatRpSafe(ep.current_price ?? pr.current_price)}</span>
+                    <span>Zona entry: <b>${entryZone}</b></span>
+                    ${lotCostRow}
+                    ${sizingRow}
+                    ${lotsRow}
+                    ${allocRow}
+                    ${shortfallRow}
+                    ${capitalShortfallRow}
+                </div>
+            </div>
+
+            <div class="consult-reason">
+                <strong>Keputusan:</strong> ${r.decision_reason || ""}
+            </div>
+
+            <div class="consult-levels">
+                <span>Zona entry: <b>${entryZone}</b></span>
+                <span>Support kritis: <b>${formatRpSafe(pr.critical_support)}</b></span>
+                <span>Stop loss: <b>${formatRpSafe(pr.stop_loss)}</b></span>
+                <span>Target: <b>${formatRpSafe(pr.take_profit)}</b></span>
+                <span>Resistance: <b>${formatRpSafe(pr.resistance)}</b></span>
+            </div>
+
+            <div class="consult-analysis-grid">
+                <div class="consult-analysis-box">
+                    <h4>Technical</h4>
+                    <p>Signal: <b>${tech.signal || "N/A"}</b></p>
+                    <p>RSI: ${tech.rsi ?? "N/A"} | Regime: ${tech.market_regime || "N/A"}</p>
+                    <p>Setup: ${tech.setup || "-"} | Confidence: ${tech.confidence ?? "N/A"}</p>
+                </div>
+                <div class="consult-analysis-box">
+                    <h4>Fundamental</h4>
+                    <p>Skor: <b>${fund.total_score ?? "N/A"}</b></p>
+                    <p>${fund.recommendation_id || fund.recommendation || "N/A"}</p>
+                    <p>Sektor: ${fund.sector || "N/A"}</p>
+                </div>
+                <div class="consult-analysis-box">
+                    <h4>Sentimen</h4>
+                    <p>${sent.overall_sentiment || "N/A"} <b>(${sent.sentiment_score ?? "N/A"})</b></p>
+                    <p>${sent.news_count ?? 0} berita terpantau</p>
+                </div>
+                <div class="consult-analysis-box">
+                    <h4>Horizon ${hz.months || ""} Bulan</h4>
+                    <p>Rekomendasi: <b>${hz.recommendation || "N/A"}</b></p>
+                    <p>Skor: ${hz.score ?? "N/A"}</p>
+                    ${hz.error ? `<p style="color:#e94560">${hz.error}</p>` : ""}
+                </div>
+            </div>
+
+            <div class="consult-steps">
+                <h4>Langkah-Langkah yang Harus Dilakukan</h4>
+                <ol>
+                    ${(r.action_steps || []).map(step => `<li>${step}</li>`).join("")}
+                </ol>
+            </div>
+
+            ${(bull.length || bear.length) ? `
+                <div class="consult-factors">
+                    ${bull.length ? `<div class="factor-col factor-bull"><h5>Faktor Pendukung</h5><ul>${bull.map(x => `<li>${x}</li>`).join("")}</ul></div>` : ""}
+                    ${bear.length ? `<div class="factor-col factor-bear"><h5>Faktor Tekanan</h5><ul>${bear.map(x => `<li>${x}</li>`).join("")}</ul></div>` : ""}
+                </div>
+            ` : ""}
+
+            ${(r.risk_notes || []).length ? `
+                <div class="consult-risks">
+                    <h5>Catatan Risiko</h5>
+                    <ul>${r.risk_notes.map(n => `<li>${n}</li>`).join("")}</ul>
+                </div>
+            ` : ""}
+
+            <p class="consult-disclaimer">${r.disclaimer || ""}</p>
+        </div>
+    `;
 }
 
 // Init

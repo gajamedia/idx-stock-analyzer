@@ -29,6 +29,7 @@
             <a href="#" class="nav-item" onclick="showSection('monitor')">Live Monitor</a>
             <a href="#" class="nav-item" onclick="showSection('notifications')">Notifications</a>
             <a href="#" class="nav-item" onclick="showSection('horizon')">Horizon Analysis</a>
+            <a href="#" class="nav-item" onclick="showSection('consultation')">Konsultasi</a>
             <a href="#" class="nav-item" onclick="showSection('reports')">Reports</a>
         </nav>
     </div>
@@ -330,6 +331,57 @@ TELEGRAM_CHAT_ID=your_chat_id
             </div>
 
             <div id="horizon-result"></div>
+        </div>
+
+        <div id="consultation-section" class="section">
+            <h2>Konsultasi Investasi</h2>
+            <p style="color:#888;margin-bottom:15px" id="consult-desc">Masukkan posisi Anda (emiten, lot, average price) — dapatkan rencana aksi per saham dari analisis teknikal, fundamental, sentimen, dan horizon.</p>
+
+            <div class="consult-mode-tabs">
+                <button class="consult-mode-tab active" id="consult-tab-holding" onclick="switchConsultMode('holding')">Punya Posisi</button>
+                <button class="consult-mode-tab" id="consult-tab-entry" onclick="switchConsultMode('entry')">Belum Punya Posisi (Rencana Beli)</button>
+            </div>
+
+            <div id="consult-panel-holding">
+                <div class="consult-add-form">
+                    <input type="text" id="consult-symbol" placeholder="Emiten (misal: NICL)" onkeypress="if(event.key==='Enter') addConsultHolding()">
+                    <input type="number" id="consult-lots" placeholder="Lot" min="1" step="1" onkeypress="if(event.key==='Enter') addConsultHolding()">
+                    <input type="number" id="consult-avg" placeholder="Average price" min="0" step="0.01" onkeypress="if(event.key==='Enter') addConsultHolding()">
+                    <button class="btn btn-primary" onclick="addConsultHolding()">Tambah Holding</button>
+                </div>
+
+                <div id="consult-holdings" class="consult-holdings"></div>
+
+                <div class="controls" style="margin-top:20px">
+                    <select id="consult-months">
+                        <option value="1">Horizon: 1 Bulan</option>
+                        <option value="3" selected>Horizon: 3 Bulan</option>
+                        <option value="6">Horizon: 6 Bulan</option>
+                        <option value="12">Horizon: 12 Bulan</option>
+                    </select>
+                    <button class="btn btn-success" id="consult-run-btn" onclick="runConsultation()">Konsultasi Sekarang</button>
+                </div>
+            </div>
+
+            <div id="consult-panel-entry" style="display:none">
+                <div class="consult-add-form">
+                    <input type="text" id="entry-symbols" placeholder="Emiten dipisah koma (misal: BBCA,TLKM,BMRI)" onkeypress="if(event.key==='Enter') runEntryConsultation()">
+                    <input type="number" id="entry-lots" placeholder="Jumlah lot (1 lot = 100 lembar) — opsional" min="1" step="1" onkeypress="if(event.key==='Enter') runEntryConsultation()">
+                    <input type="number" id="entry-capital" placeholder="Modal (Rp) — opsional (untuk hitung lot)" min="0" step="1000" onkeypress="if(event.key==='Enter') runEntryConsultation()">
+                </div>
+
+                <div class="controls" style="margin-top:4px">
+                    <select id="entry-months">
+                        <option value="1">Horizon: 1 Bulan</option>
+                        <option value="3" selected>Horizon: 3 Bulan</option>
+                        <option value="6">Horizon: 6 Bulan</option>
+                        <option value="12">Horizon: 12 Bulan</option>
+                    </select>
+                    <button class="btn btn-success" id="entry-run-btn" onclick="runEntryConsultation()">Konsultasi Rencana Beli</button>
+                </div>
+            </div>
+
+            <div id="consult-result"></div>
         </div>
 
         <div id="reports-section" class="section">
