@@ -8,7 +8,7 @@ from data_fetcher import fetch_stock_history, fetch_stock_info
 from technical import analyze_stock
 from fundamental import analyze_fundamental
 from sentiment import analyze_sentiment
-from horizon import analyze_horizon
+from horizon import analyze_horizon, horizon_label
 
 LOT_SIZE = 100
 
@@ -138,12 +138,11 @@ def _collect_votes(pnl_pct, levels, technical, fundamental, sentiment, horizon, 
     if horizon_error is None and horizon:
         hz_score = horizon.get("score", 0)
         hz_rec = horizon.get("recommendation", "HOLD")
+        hz_lbl = horizon.get("horizon", {}).get("label") or horizon_label(horizon.get("horizon", {}).get("months", 3))
         if hz_score <= -7 or hz_rec in ("SELL", "STRONG SELL"):
-            bear.append("Horizon {} bulan: {} (skor {:+.0f})".format(
-                horizon.get("horizon", {}).get("months", "?"), hz_rec, hz_score or 0))
+            bear.append("Horizon {}: {} (skor {:+.0f})".format(hz_lbl, hz_rec, hz_score or 0))
         elif hz_score >= 5 or hz_rec in ("BUY", "STRONG BUY"):
-            bull.append("Horizon {} bulan: {} (skor {:+.0f})".format(
-                horizon.get("horizon", {}).get("months", "?"), hz_rec, hz_score or 0))
+            bull.append("Horizon {}: {} (skor {:+.0f})".format(hz_lbl, hz_rec, hz_score or 0))
 
     fund_score = (fundamental or {}).get("total_score", 0) or 0
     if fund_score <= -4:
@@ -442,6 +441,7 @@ def _analysis_payload(votes, fundamental, sentiment, horizon, horizon_error, hor
         },
         "horizon": {
             "months": horizon_months,
+            "label": horizon_label(horizon_months),
             "recommendation": horizon.get("recommendation") if horizon else None,
             "score": horizon.get("score") if horizon else None,
             "rationale": hz_rationale,
@@ -959,6 +959,7 @@ def analyze_entry_consultation(symbols, horizon_months=3, capital=None, lots=Non
         "analysis_date": datetime.now().isoformat(),
         "mode": "entry",
         "horizon_months": horizon_months,
+        "horizon_label": horizon_label(horizon_months),
         "capital": capital,
         "lots": lots,
         "results": results,
@@ -1012,6 +1013,7 @@ def analyze_portfolio_consultation(holdings, horizon_months=3):
     return {
         "analysis_date": datetime.now().isoformat(),
         "horizon_months": horizon_months,
+        "horizon_label": horizon_label(horizon_months),
         "holdings": results,
         "summary": {
             "holding_count": len(results),

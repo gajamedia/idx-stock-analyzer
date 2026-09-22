@@ -23,6 +23,28 @@ def safe_round(val, decimals=2, default=None):
     return round(f, decimals)
 
 
+HORIZON_LABELS = {
+    0.25: "1 Minggu",
+    1: "1 Bulan",
+    3: "3 Bulan",
+    6: "6 Bulan",
+    12: "12 Bulan (1 Tahun)",
+}
+
+
+def horizon_label(horizon_months):
+    m = safe_float(horizon_months)
+    if m is None:
+        return "3 Bulan"
+    for key, label in HORIZON_LABELS.items():
+        if abs(m - key) < 1e-6:
+            return label
+    if m < 1:
+        weeks = max(1, int(round(m * 4.345)))
+        return "{} Minggu".format(weeks)
+    return "{} Bulan".format(int(round(m)))
+
+
 def aggregate_to_weekly(daily_data):
     if not daily_data or len(daily_data) < 10:
         return None
@@ -214,12 +236,15 @@ def calculate_trend_strength(prices_data):
 
 def calculate_price_targets(current_price, atr, support_resistance, trend_info, horizon_months):
     volatility_factor = {
+        0.25: 0.5,
         1: 1.0,
         3: 1.7,
         6: 2.4,
         12: 3.5,
     }
     factor = volatility_factor.get(horizon_months, 1.0)
+    if factor == 1.0 and safe_float(horizon_months, 1.0) < 1:
+        factor = max(0.3, safe_float(horizon_months, 1.0))
 
     atr_val = safe_float(atr)
     if atr_val is not None and atr_val > 0:
@@ -371,7 +396,15 @@ def estimate_holding_period_return(current_price, trend_info, volatility, horizo
     cumulative_bull = 1.0
     cumulative_bear = 1.0
 
-    for m in range(1, horizon_months + 1):
+    if horizon_months < 1:
+        period_points = [horizon_months]
+    else:
+        whole = int(math.floor(horizon_months))
+        period_points = list(range(1, whole + 1))
+        if horizon_months - whole > 1e-9:
+            period_points.append(horizon_months)
+
+    for m in period_points:
         exp_base = (mu - 0.5 * sigma**2) * m + sigma * np.sqrt(m) * 0.0
         exp_bull = (mu - 0.5 * sigma**2) * m + sigma * np.sqrt(m) * 0.67
         exp_bear = (mu - 0.5 * sigma**2) * m + sigma * np.sqrt(m) * -0.67
@@ -776,6 +809,7 @@ def generate_detailed_analysis(
     entry_zone = price_targets.get("entry_zone", {})
     take_profit = price_targets.get("take_profit", 0)
     stop_loss = price_targets.get("stop_loss", 0)
+    hz_label = horizon_label(horizon_months)
 
     if "UPTREND" in trend and "DOWN" not in trend:
         strengths.append(
@@ -876,9 +910,9 @@ def generate_detailed_analysis(
 
     if expected_return > 15:
         opportunities.append(
-            "Potensi return sangat tinggi ({:.1f}%) dalam {} bulan "
+            "Potensi return sangat tinggi ({:.1f}%) dalam {} "
             "- dari {} diperkirakan naik ke {}".format(
-                expected_return, horizon_months, format_rp(current_price),
+                expected_return, hz_label, format_rp(current_price),
                 format_rp(holding_return.get("expected_price"))
             )
         )
@@ -897,17 +931,17 @@ def generate_detailed_analysis(
                 )
     elif expected_return > 10:
         opportunities.append(
-            "Potensi return tinggi ({:.1f}%) dalam {} bulan "
+            "Potensi return tinggi ({:.1f}%) dalam {} "
             "- target harga {}".format(
-                expected_return, horizon_months,
+                expected_return, hz_label,
                 format_rp(holding_return.get("expected_price"))
             )
         )
     elif expected_return > 5:
         opportunities.append(
-            "Potensi return moderat ({:.1f}%) dalam {} bulan "
+            "Potensi return moderat ({:.1f}%) dalam {} "
             "- target harga {}".format(
-                expected_return, horizon_months,
+                expected_return, hz_label,
                 format_rp(holding_return.get("expected_price"))
             )
         )
@@ -918,9 +952,9 @@ def generate_detailed_analysis(
         )
     elif expected_return > -5:
         weaknesses.append(
-            "Proyeksi return negatif ({:.1f}%) dalam {} bulan "
+            "Proyeksi return negatif ({:.1f}%) dalam {} "
             "- harga diperkirakan turun ke {}".format(
-                expected_return, horizon_months,
+                expected_return, hz_label,
                 format_rp(holding_return.get("expected_price"))
             )
         )
@@ -930,9 +964,9 @@ def generate_detailed_analysis(
         )
     else:
         risks.append(
-            "Potensi kerugian signifikan ({:.1f}%) dalam {} bulan. "
+            "Potensi kerugian signifikan ({:.1f}%) dalam {}. "
             "Harga diperkirakan turun ke {}".format(
-                expected_return, horizon_months,
+                expected_return, hz_label,
                 format_rp(holding_return.get("expected_price"))
             )
         )
@@ -1141,14 +1175,15 @@ def compare_with_benchmark(daily_data, benchmark_data, horizon_months=3):
 
         correlation = np.corrcoef(stock_returns, bench_returns)[0, 1]
 
-        lookback = min(horizon_months * 21, min_len)
+        lookback = max(5, min(int(round(horizon_months * 21)), min_len))
         stock_period_return = (stock_close[-1] / stock_close[-lookback] - 1) * 100
         bench_period_return = (bench_close[-1] / bench_close[-lookback] - 1) * 100
         relative_strength = stock_period_return - bench_period_return
+        hz_label = horizon_label(horizon_months)
 
         if relative_strength > 5:
             rs_label = "OUTPERFORM"
-            rs_desc = "Saham mengunggulkan benchmark {:.1f}% dalam {} bulan terakhir".format(relative_strength, horizon_months)
+            rs_desc = "Saham mengunggulkan benchmark {:.1f}% dalam horizon {} terakhir".format(relative_strength, hz_label)
         elif relative_strength > 0:
             rs_label = "SLIGHT OUTPERFORM"
             rs_desc = "Saham sedikit lebih baik dari benchmark ({:.1f}%)".format(relative_strength)
@@ -1157,7 +1192,7 @@ def compare_with_benchmark(daily_data, benchmark_data, horizon_months=3):
             rs_desc = "Saham sedikit di bawah benchmark ({:.1f}%)".format(relative_strength)
         else:
             rs_label = "UNDERPERFORM"
-            rs_desc = "Saham tertinggal dari benchmark {:.1f}% dalam {} bulan terakhir".format(abs(relative_strength), horizon_months)
+            rs_desc = "Saham tertinggal dari benchmark {:.1f}% dalam horizon {} terakhir".format(abs(relative_strength), hz_label)
 
         return {
             "benchmark_name": "IHSG",
@@ -1264,13 +1299,6 @@ def analyze_horizon(daily_data, stock_info, horizon_months=3, sentiment_data=Non
         fundamental_data, sentiment_data, horizon_months, tf_score
     )
 
-    horizon_labels = {
-        1: "1 Bulan",
-        3: "3 Bulan",
-        6: "6 Bulan",
-        12: "12 Bulan (1 Tahun)",
-    }
-
     return {
         "symbol": stock_info.get("symbol") if stock_info else None,
         "company_name": stock_info.get("name") if stock_info else None,
@@ -1278,7 +1306,7 @@ def analyze_horizon(daily_data, stock_info, horizon_months=3, sentiment_data=Non
         "analysis_date": datetime.now().isoformat(),
         "horizon": {
             "months": horizon_months,
-            "label": horizon_labels.get(horizon_months, "{} Bulan".format(horizon_months)),
+            "label": horizon_label(horizon_months),
         },
         "recommendation": recommendation,
         "rationale": rationale,
@@ -1311,8 +1339,8 @@ def analyze_horizon(daily_data, stock_info, horizon_months=3, sentiment_data=Non
 
 def get_all_horizons(daily_data, stock_info, sentiment_data=None, fundamental_data=None, benchmark_data=None):
     horizons = {}
-    for months in [1, 3, 6, 12]:
+    for key, months in [("1w", 0.25), ("1m", 1), ("3m", 3), ("6m", 6), ("12m", 12)]:
         result = analyze_horizon(daily_data, stock_info, months, sentiment_data, fundamental_data, benchmark_data)
-        horizons["{}m".format(months)] = result
+        horizons[key] = result
 
     return horizons

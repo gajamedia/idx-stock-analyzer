@@ -101,12 +101,12 @@ class PortfolioHoldingRequest(BaseModel):
 
 
 class ConsultationRequest(BaseModel):
-    horizon_months: int = 3
+    horizon_months: float = 3
 
 
 class EntryConsultationRequest(BaseModel):
     symbols: List[str]
-    horizon_months: int = 3
+    horizon_months: float = 3
     capital: Optional[float] = None
     lots: Optional[int] = None
 
@@ -564,11 +564,11 @@ async def generate_full_report(symbols: str = Query("BBCA,BBRI,TLKM")):
 
 class HorizonRequest(BaseModel):
     symbol: str
-    horizon_months: Optional[int] = 3
+    horizon_months: Optional[float] = 3
 
 
 @app.get("/api/stock/{symbol}/horizon")
-async def get_horizon_analysis(symbol: str, months: int = Query(3, ge=1, le=12)):
+async def get_horizon_analysis(symbol: str, months: float = Query(3, ge=0.25, le=12)):
     symbol = symbol.upper()
 
     history = fetch_stock_history(symbol, period="1y")
@@ -706,8 +706,8 @@ async def run_consultation(request: ConsultationRequest):
     holdings = portfolio_get_all()
     if not holdings:
         raise HTTPException(status_code=400, detail="Belum ada holdings. Tambahkan emiten terlebih dahulu.")
-    if request.horizon_months < 1 or request.horizon_months > 12:
-        raise HTTPException(status_code=400, detail="horizon_months harus 1-12")
+    if request.horizon_months < 0.25 or request.horizon_months > 12:
+        raise HTTPException(status_code=400, detail="horizon_months harus 0.25 (1 minggu) - 12")
     return analyze_portfolio_consultation(holdings, horizon_months=request.horizon_months)
 
 
@@ -719,8 +719,8 @@ async def run_entry_consultation(request: EntryConsultationRequest):
         raise HTTPException(status_code=400, detail="Minimal satu emiten harus diberikan.")
     if len(symbols) > 20:
         raise HTTPException(status_code=400, detail="Maksimal 20 emiten per konsultasi.")
-    if request.horizon_months < 1 or request.horizon_months > 12:
-        raise HTTPException(status_code=400, detail="horizon_months harus 1-12")
+    if request.horizon_months < 0.25 or request.horizon_months > 12:
+        raise HTTPException(status_code=400, detail="horizon_months harus 0.25 (1 minggu) - 12")
     if request.capital is not None and request.capital <= 0:
         raise HTTPException(status_code=400, detail="capital harus lebih dari 0")
     if request.lots is not None and request.lots < 1:

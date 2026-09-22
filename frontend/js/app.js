@@ -1441,6 +1441,16 @@ async function analyzeFullWatchlist() {
 
 // ===== HORIZON ANALYSIS =====
 
+function formatHorizonMonths(m) {
+    if (m == null) return "3 Bulan";
+    const v = parseFloat(m);
+    if (isNaN(v)) return "3 Bulan";
+    if (Math.abs(v - 0.25) < 1e-6) return "1 Minggu";
+    if (v < 1) return Math.max(1, Math.round(v * 4.345)) + " Minggu";
+    if (Number.isInteger(v)) return v + " Bulan";
+    return v + " Bulan";
+}
+
 async function analyzeHorizon() {
     const symbol = document.getElementById("hz-symbol").value.trim().toUpperCase();
     const months = document.getElementById("hz-months").value;
@@ -1674,8 +1684,8 @@ function renderAllHorizonsResult(data) {
         <div class="horizon-summary-grid">
     `;
 
-    const horizonOrder = ["1m", "3m", "6m", "12m"];
-    const horizonLabels = {"1m": "1 Bulan", "3m": "3 Bulan", "6m": "6 Bulan", "12m": "12 Bulan"};
+    const horizonOrder = ["1w", "1m", "3m", "6m", "12m"];
+    const horizonLabels = {"1w": "1 Minggu", "1m": "1 Bulan", "3m": "3 Bulan", "6m": "6 Bulan", "12m": "12 Bulan"};
 
     for (const key of horizonOrder) {
         const h = horizons[key];
@@ -2005,7 +2015,7 @@ async function removeConsultHolding(symbol) {
 }
 
 async function runConsultation() {
-    const months = parseInt(document.getElementById("consult-months").value, 10) || 3;
+    const months = parseFloat(document.getElementById("consult-months").value) || 3;
     const btn = document.getElementById("consult-run-btn");
     const container = document.getElementById("consult-result");
     btn.disabled = true;
@@ -2056,7 +2066,7 @@ function renderConsultationResults(data) {
             </div>
             <div class="consult-summary-item">
                 <span class="label">Horizon</span>
-                <span class="value">${data.horizon_months} Bulan</span>
+                <span class="value">${data.horizon_label || formatHorizonMonths(data.horizon_months)}</span>
             </div>
         </div>
         <div class="consult-chips">${decisionsChips}</div>
@@ -2140,7 +2150,7 @@ function renderConsultHoldingCard(h) {
                     <p>${sent.news_count ?? 0} berita terpantau</p>
                 </div>
                 <div class="consult-analysis-box">
-                    <h4>Horizon ${hz.months || ""} Bulan</h4>
+                    <h4>Horizon ${hz.label || formatHorizonMonths(hz.months)}</h4>
                     <p>Rekomendasi: <b>${hz.recommendation || "N/A"}</b></p>
                     <p>Skor: ${hz.score ?? "N/A"}</p>
                     ${hz.error ? `<p style="color:#e94560">${hz.error}</p>` : ""}
@@ -2211,7 +2221,7 @@ async function runEntryConsultation() {
     const symbolsRaw = document.getElementById("entry-symbols").value.trim();
     const capitalRaw = document.getElementById("entry-capital").value;
     const lotsRaw = document.getElementById("entry-lots").value;
-    const months = parseInt(document.getElementById("entry-months").value, 10) || 3;
+    const months = parseFloat(document.getElementById("entry-months").value) || 3;
     const btn = document.getElementById("entry-run-btn");
     const container = document.getElementById("consult-result");
 
@@ -2288,7 +2298,7 @@ function renderEntryConsultationResults(data) {
             </div>
             <div class="consult-summary-item">
                 <span class="label">Horizon</span>
-                <span class="value">${data.horizon_months} Bulan</span>
+                <span class="value">${data.horizon_label || formatHorizonMonths(data.horizon_months)}</span>
             </div>
             <div class="consult-summary-item">
                 <span class="label">Modal</span>
@@ -2416,7 +2426,7 @@ function renderEntryCard(r) {
                     <p>${sent.news_count ?? 0} berita terpantau</p>
                 </div>
                 <div class="consult-analysis-box">
-                    <h4>Horizon ${hz.months || ""} Bulan</h4>
+                    <h4>Horizon ${hz.label || formatHorizonMonths(hz.months)}</h4>
                     <p>Rekomendasi: <b>${hz.recommendation || "N/A"}</b></p>
                     <p>Skor: ${hz.score ?? "N/A"}</p>
                     ${hz.error ? `<p style="color:#e94560">${hz.error}</p>` : ""}
