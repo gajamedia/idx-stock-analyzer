@@ -2324,6 +2324,23 @@ header h1 {
     opacity: 0.8;
 }
 
+.page-disclaimer {
+    margin-top: -18px;
+    margin-bottom: 24px;
+    padding: 10px 16px;
+    background: rgba(233, 69, 96, 0.08);
+    border: 1px solid rgba(233, 69, 96, 0.35);
+    border-left: 3px solid #e94560;
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+.page-disclaimer strong {
+    color: #e94560;
+}
+
 @media (max-width: 768px) {
     .consult-add-form input { min-width: 100%; }
     .consult-card-meta { gap: 8px; }
