@@ -277,6 +277,7 @@ async def get_stock_analysis(symbol: str):
     technical = analyze_stock(history)
     fundamental = analyze_fundamental(stock_info)
     sentiment = analyze_sentiment(symbol)
+    fin_data = get_financial_data(symbol)
 
     return {
         "symbol": symbol,
@@ -284,6 +285,10 @@ async def get_stock_analysis(symbol: str):
         "fundamental": fundamental,
         "sentiment": sentiment,
         "info": stock_info,
+        "financial_data_status": {
+            "exists": fin_data is not None,
+            "period": fin_data.get("period") if fin_data else None,
+        },
     }
 
 
@@ -589,11 +594,16 @@ async def get_horizon_analysis(symbol: str, months: float = Query(3, ge=0.25, le
         benchmark_data=benchmark,
     )
 
+    fin_data = get_financial_data(symbol)
     return {
         "symbol": symbol,
         "horizon": result,
         "fundamental": fundamental,
         "sentiment": sentiment,
+        "financial_data_status": {
+            "exists": fin_data is not None,
+            "period": fin_data.get("period") if fin_data else None,
+        },
     }
 
 
@@ -618,11 +628,16 @@ async def get_all_horizon_analysis(symbol: str):
         benchmark_data=benchmark,
     )
 
+    fin_data = get_financial_data(symbol)
     return {
         "symbol": symbol,
         "horizons": all_horizons,
         "fundamental": fundamental,
         "sentiment": sentiment,
+        "financial_data_status": {
+            "exists": fin_data is not None,
+            "period": fin_data.get("period") if fin_data else None,
+        },
     }
 
 

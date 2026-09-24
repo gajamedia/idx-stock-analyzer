@@ -357,13 +357,42 @@ async function analyzeStock() {
     }
 }
 
+function financialMissingNoticeHtml(symbolOrSymbols) {
+    let list = Array.isArray(symbolOrSymbols) ? symbolOrSymbols : [symbolOrSymbols];
+    list = (list || []).filter(Boolean);
+    if (!list.length) return "";
+
+    const label = list.length === 1
+        ? `Data keuangan ${list[0]} belum diisi.`
+        : `Data keuangan belum diisi untuk: ${list.join(", ")}.`;
+    const first = list[0];
+
+    return `
+        <div class="financial-missing-notice" role="alert">
+            <div class="fm-notice-text">
+                <strong>${label}</strong>
+                Silakan mengisi atau fetch data financial terlebih dahulu agar analisis fundamental optimal.
+            </div>
+            <div class="fm-notice-actions">
+                <button class="btn btn-primary" onclick="goFillFinancial('${first}')">Isi Data Keuangan</button>
+                <button class="btn" onclick="this.closest('.financial-missing-notice').remove()">Abaikan</button>
+            </div>
+        </div>
+    `;
+}
+
 function renderAnalysis(data) {
     const tech = data.technical;
     const fund = data.fundamental;
     const sent = data.sentiment;
+    const finStatus = data.financial_data_status || {};
 
     const container = document.getElementById("analysis-result");
-    container.innerHTML = `
+    const missingFinancialBanner = finStatus.exists === false
+        ? financialMissingNoticeHtml(data.symbol)
+        : "";
+
+    container.innerHTML = missingFinancialBanner + `
         <div class="analysis-card full-width">
             <h3>${data.symbol} - ${fund?.name || data.symbol}</h3>
             <div style="display:flex;gap:20px;align-items:center">
@@ -721,6 +750,15 @@ function renderChart(chartData) {
 function showStockDetail(symbol) {
     document.getElementById("global-search").value = symbol;
     analyzeStock();
+}
+
+function goFillFinancial(symbol) {
+    showSection("financial");
+    const input = document.getElementById("quick-fetch-symbol");
+    if (input) {
+        input.value = symbol;
+        input.focus();
+    }
 }
 
 // Backtest
@@ -1503,7 +1541,11 @@ function renderHorizonResult(data) {
     const sr = h.support_resistance || {};
     const risk = h.risk_metrics || {};
 
-    return `
+    const missingBanner = data.financial_data_status?.exists === false
+        ? financialMissingNoticeHtml(data.symbol)
+        : "";
+
+    return missingBanner + `
         <div class="horizon-result">
             <div class="horizon-header">
                 <h3>${h.symbol} - ${h.company_name || ""}</h3>
@@ -1676,7 +1718,11 @@ function renderAllHorizonsResult(data) {
     const fundamental = data.fundamental || {};
     const sentiment = data.sentiment || {};
 
-    let html = `
+    const missingBanner = data.financial_data_status?.exists === false
+        ? financialMissingNoticeHtml(data.symbol)
+        : "";
+
+    let html = missingBanner + `
         <div class="horizon-all-header">
             <h3>${data.symbol} - Multi-Horizon Analysis</h3>
         </div>
@@ -2050,7 +2096,9 @@ function renderConsultationResults(data) {
         .map(([k, v]) => `<span class="consult-chip chip-${k.toLowerCase().replace(/\s+/g, "-")}">${k}: ${v}</span>`)
         .join("");
 
-    let html = `
+    const missingBanner = financialMissingNoticeHtml(data.missing_financial_symbols || []);
+
+    let html = missingBanner + `
         <div class="consult-summary">
             <div class="consult-summary-item">
                 <span class="label">Total Modal</span>
@@ -2123,6 +2171,13 @@ function renderConsultHoldingCard(h) {
             <div class="consult-reason">
                 <strong>Keputusan:</strong> ${h.decision_reason || ""}
             </div>
+
+            ${h.financial_data_status?.exists === false ? `
+                <div class="financial-missing-inline">
+                    Data keuangan belum diisi —
+                    <a href="#" onclick="goFillFinancial('${h.symbol}');return false">isi terlebih dahulu</a>
+                </div>
+            ` : ""}
 
             <div class="consult-levels">
                 <span>Support kritis: <b>${formatRpSafe(pr.critical_support)}</b></span>
@@ -2290,7 +2345,9 @@ function renderEntryConsultationResults(data) {
             </div>`
         : "";
 
-    let html = `
+    const missingBanner = financialMissingNoticeHtml(data.missing_financial_symbols || []);
+
+    let html = missingBanner + `
         <div class="consult-summary">
             <div class="consult-summary-item">
                 <span class="label">Emiten Dianalisis</span>
@@ -2398,6 +2455,13 @@ function renderEntryCard(r) {
             <div class="consult-reason">
                 <strong>Keputusan:</strong> ${r.decision_reason || ""}
             </div>
+
+            ${r.financial_data_status?.exists === false ? `
+                <div class="financial-missing-inline">
+                    Data keuangan belum diisi —
+                    <a href="#" onclick="goFillFinancial('${r.symbol}');return false">isi terlebih dahulu</a>
+                </div>
+            ` : ""}
 
             <div class="consult-levels">
                 <span>Zona entry: <b>${entryZone}</b></span>

@@ -9,8 +9,17 @@ from technical import analyze_stock
 from fundamental import analyze_fundamental
 from sentiment import analyze_sentiment
 from horizon import analyze_horizon, horizon_label
+from financial_updater import get_financial_data
 
 LOT_SIZE = 100
+
+
+def _financial_status(symbol):
+    fin = get_financial_data(symbol)
+    return {
+        "exists": fin is not None,
+        "period": fin.get("period") if fin else None,
+    }
 
 DISCLAIMER = (
     "Hasil konsultasi ini dihasilkan secara otomatis dari data teknikal, fundamental, "
@@ -497,6 +506,7 @@ def analyze_holding(symbol, lots, avg_price, horizon_months=3, benchmark_data=No
         },
         "analysis": _analysis_payload(votes, fundamental, sentiment, horizon, horizon_error, horizon_months),
         "risk_notes": risk_notes,
+        "financial_data_status": _financial_status(symbol),
         "disclaimer": DISCLAIMER,
     }
 
@@ -920,6 +930,7 @@ def analyze_entry(symbol, horizon_months=3, capital=None, lots=None, benchmark_d
         },
         "analysis": _analysis_payload(votes, fundamental, sentiment, horizon, horizon_error, horizon_months),
         "risk_notes": risk_notes,
+        "financial_data_status": _financial_status(symbol),
         "disclaimer": DISCLAIMER,
     }
 
@@ -955,6 +966,11 @@ def analyze_entry_consultation(symbols, horizon_months=3, capital=None, lots=Non
     if capital:
         total_alloc = sum((r.get("entry_plan") or {}).get("allocation_rupiah") or 0 for r in valid)
 
+    missing_fin = [
+        r["symbol"] for r in valid
+        if (r.get("financial_data_status") or {}).get("exists") is False
+    ]
+
     return {
         "analysis_date": datetime.now().isoformat(),
         "mode": "entry",
@@ -963,6 +979,7 @@ def analyze_entry_consultation(symbols, horizon_months=3, capital=None, lots=Non
         "capital": capital,
         "lots": lots,
         "results": results,
+        "missing_financial_symbols": missing_fin,
         "summary": {
             "requested_count": len(results),
             "analyzed_count": len(valid),
@@ -1010,11 +1027,17 @@ def analyze_portfolio_consultation(holdings, horizon_months=3):
     for r in valid:
         decisions_count[r["decision"]] = decisions_count.get(r["decision"], 0) + 1
 
+    missing_fin = [
+        r["symbol"] for r in valid
+        if (r.get("financial_data_status") or {}).get("exists") is False
+    ]
+
     return {
         "analysis_date": datetime.now().isoformat(),
         "horizon_months": horizon_months,
         "horizon_label": horizon_label(horizon_months),
         "holdings": results,
+        "missing_financial_symbols": missing_fin,
         "summary": {
             "holding_count": len(results),
             "analyzed_count": len(valid),

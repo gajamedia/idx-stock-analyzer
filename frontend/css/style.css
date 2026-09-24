@@ -499,6 +499,54 @@ header h1 {
     grid-column: 1 / -1;
 }
 
+.financial-missing-notice {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    background: rgba(255, 152, 0, 0.1);
+    border: 1px solid rgba(255, 152, 0, 0.45);
+    border-left: 3px solid #ff9800;
+    border-radius: var(--radius, 8px);
+}
+
+.financial-missing-notice .fm-notice-text {
+    color: var(--text-primary, #eee);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.financial-missing-notice .fm-notice-text strong {
+    display: block;
+    color: #ff9800;
+    margin-bottom: 2px;
+}
+
+.financial-missing-notice .fm-notice-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.financial-missing-inline {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: rgba(255, 152, 0, 0.08);
+    border: 1px solid rgba(255, 152, 0, 0.35);
+    border-left: 3px solid #ff9800;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--text-muted, #aaa);
+}
+
+.financial-missing-inline a {
+    color: #ff9800;
+    text-decoration: underline;
+}
+
 /* ========================================
    INDICATOR ROWS
    ======================================== */
